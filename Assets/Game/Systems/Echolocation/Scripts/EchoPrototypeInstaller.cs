@@ -20,8 +20,22 @@ namespace AnEchoHasNoShape.Echolocation
                 if (renderer.GetComponent<MeshFilter>() == null ||
                     (renderer.gameObject.hideFlags & HideFlags.DontSave) != 0 ||
                     renderer.transform.root.CompareTag("Player") ||
-                    renderer.GetComponentInParent<EchoRenderingExclusion>(true) != null ||
-                    renderer.GetComponent<EchoReactiveSurface>() != null)
+                    renderer.GetComponentInParent<EchoRenderingExclusion>(true) != null)
+                {
+                    continue;
+                }
+
+                if (IsWaterRenderer(renderer))
+                {
+                    if (renderer.GetComponent<WorldReverberationWaterSurface>() == null)
+                    {
+                        renderer.gameObject.AddComponent<WorldReverberationWaterSurface>();
+                    }
+
+                    continue;
+                }
+
+                if (renderer.GetComponent<EchoReactiveSurface>() != null)
                 {
                     continue;
                 }
@@ -38,7 +52,33 @@ namespace AnEchoHasNoShape.Echolocation
                 {
                     terrain.gameObject.AddComponent<EchoReactiveTerrain>();
                 }
+
+                TerrainTreeEchoProxy.EnsureFor(terrain);
             }
+        }
+
+        private static bool IsWaterRenderer(MeshRenderer renderer)
+        {
+            if (renderer.gameObject.name.ToLowerInvariant().Contains("water"))
+            {
+                return true;
+            }
+
+            foreach (Material material in renderer.sharedMaterials)
+            {
+                if (material == null)
+                {
+                    continue;
+                }
+
+                string description = $"{material.name} {(material.shader != null ? material.shader.name : string.Empty)}";
+                if (description.ToLowerInvariant().Contains("water"))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

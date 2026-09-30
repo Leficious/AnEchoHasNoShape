@@ -67,6 +67,11 @@ namespace AnEchoHasNoShape.Interaction
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
             panelRoot.SetActive(true);
+
+            if (EventSystem.current != null)
+            {
+                EventSystem.current.SetSelectedGameObject(null);
+            }
         }
 
         private void Confirm()
@@ -117,6 +122,7 @@ namespace AnEchoHasNoShape.Interaction
             scaler.referenceResolution = new Vector2(1920f, 1080f);
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
             scaler.matchWidthOrHeight = 0.5f;
+            canvasObject.AddComponent<GraphicRaycaster>();
 
             panelRoot = new GameObject("Confirmation Panel", typeof(RectTransform), typeof(Image));
             RectTransform panel = panelRoot.GetComponent<RectTransform>();
@@ -141,10 +147,29 @@ namespace AnEchoHasNoShape.Interaction
             rect.anchorMax = max;
             rect.offsetMin = rect.offsetMax = Vector2.zero;
             obj.GetComponent<Image>().color = new Color(0.1f, 0.13f, 0.14f, 1f);
-            obj.GetComponent<Button>().onClick.AddListener(() => action());
+            Button button = obj.GetComponent<Button>();
+            button.transition = Selectable.Transition.ColorTint;
+            button.colors = CreateColorBlock();
+            button.navigation = new Navigation { mode = Navigation.Mode.None };
+            button.onClick.AddListener(() => action());
             Text text = CreateText(rect, "Label", font, 27, Vector2.zero, Vector2.one);
             text.text = label;
             text.alignment = TextAnchor.MiddleCenter;
+            text.raycastTarget = false;
+        }
+
+        private static ColorBlock CreateColorBlock()
+        {
+            return new ColorBlock
+            {
+                normalColor = Color.white,
+                highlightedColor = new Color(1.28f, 1.28f, 1.28f, 1f),
+                pressedColor = new Color(1.55f, 1.48f, 1.25f, 1f),
+                selectedColor = Color.white,
+                disabledColor = new Color(0.45f, 0.45f, 0.45f, 0.6f),
+                colorMultiplier = 1f,
+                fadeDuration = 0.08f
+            };
         }
 
         private static Text CreateText(Transform parent, string name, Font font, int size, Vector2 min, Vector2 max)

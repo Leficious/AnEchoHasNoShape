@@ -1,6 +1,8 @@
+using System.Collections;
 using AnEchoHasNoShape.Echolocation;
 using AnEchoHasNoShape.Interaction;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace AnEchoHasNoShape
 {
@@ -12,6 +14,15 @@ namespace AnEchoHasNoShape
         {
             CenterMonument,
             GlacierStart,
+            GlacierMid,
+            GlacierEnd
+        }
+
+        public enum PlayerCheckpoint
+        {
+            Monument,
+            GlacierStart,
+            GlacierMid,
             GlacierEnd
         }
 
@@ -41,6 +52,11 @@ namespace AnEchoHasNoShape
         [Tooltip("Useful for testing later sections. Leave disabled for the intended opening.")]
         [SerializeField] private bool startWithEchoUnlocked;
 
+        [Header("Checkpoint Transition")]
+        [SerializeField, Min(0.01f)] private float checkpointFadeToBlackDuration = 0.25f;
+        [SerializeField, Min(0f)] private float checkpointBlackHoldDuration = 0.08f;
+        [SerializeField, Min(0.01f)] private float checkpointFadeFromBlackDuration = 0.7f;
+
         [Header("Development Start State")]
         [Tooltip("Development builds and the Editor only. Enables start-state overrides and the slash-command console.")]
         [SerializeField] private bool enableDevelopmentTools;
@@ -50,13 +66,16 @@ namespace AnEchoHasNoShape
         [Tooltip("Starts after TabletMain: echo unlocked, first reverberation counted, and HiddenDoorStone open.")]
         [SerializeField] private bool tutorialCompleted;
 
-        [Tooltip("Optional explicit center spawn. Leaving this empty keeps the player's authored scene position.")]
+        [Tooltip("Optional explicit monument spawn. If empty, an object named MonumentSpawn is used.")]
         [SerializeField] private Transform centerMonumentSpawn;
 
-        [Tooltip("Optional explicit glacier spawn. If empty, an object named GlacierRespawn is used.")]
+        [Tooltip("Optional explicit glacier-start spawn. If empty, an object named GlacierRespawnStart is used.")]
         [SerializeField] private Transform glacierStartSpawn;
 
-        [Tooltip("Optional glacier-end spawn. If empty, an object named GlacierEnd is used.")]
+        [Tooltip("Optional glacier-midpoint spawn. If empty, an object named GlacierRespawnMid is used.")]
+        [SerializeField] private Transform glacierMidSpawn;
+
+        [Tooltip("Optional glacier-end spawn. If empty, an object named GlacierRespawnEnd is used.")]
         [SerializeField] private Transform glacierEndSpawn;
 
         private const string VolumetricFogResourcePath = "Rendering/AERO Basic Fog";
@@ -72,6 +91,10 @@ namespace AnEchoHasNoShape
         private bool echoUnlocked;
         private bool developmentStateApplied;
         private int completedWorldReverberations;
+        private PlayerCheckpoint currentCheckpoint = PlayerCheckpoint.Monument;
+        private Canvas checkpointFadeCanvas;
+        private CanvasGroup checkpointFadeGroup;
+        private bool checkpointTransitionActive;
 
         public Font HeaderFont => headerFont;
         public Font BodyFont => bodyFont;
@@ -82,6 +105,7 @@ namespace AnEchoHasNoShape
         public bool EchoUnlocked => echoUnlocked;
         public bool DevelopmentToolsEnabled => enableDevelopmentTools && (Application.isEditor || Debug.isDebugBuild);
         public int CompletedWorldReverberations => completedWorldReverberations;
+        public PlayerCheckpoint CurrentCheckpoint => currentCheckpoint;
 
         private void Awake()
         {
@@ -92,6 +116,7 @@ namespace AnEchoHasNoShape
             }
 
             Instance = this;
+            currentCheckpoint = PlayerCheckpoint.Monument;
             EnsureEchoIgnored("GlacierAreaOuter");
             EnsureEchoIgnored("GlacierAreaInner");
             echoUnlocked = startWithEchoUnlocked;
@@ -133,13 +158,20 @@ namespace AnEchoHasNoShape
             switch (initialSpawnPoint)
             {
                 case DevelopmentSpawnPoint.GlacierStart:
-                    destination = ResolveTransform(glacierStartSpawn, "GlacierRespawn");
+                    SetCheckpoint(PlayerCheckpoint.GlacierStart);
+                    destination = GetCurrentCheckpointTransform();
+                    break;
+                case DevelopmentSpawnPoint.GlacierMid:
+                    SetCheckpoint(PlayerCheckpoint.GlacierMid);
+                    destination = GetCurrentCheckpointTransform();
                     break;
                 case DevelopmentSpawnPoint.GlacierEnd:
-                    destination = ResolveTransform(glacierEndSpawn, "GlacierEnd");
+                    SetCheckpoint(PlayerCheckpoint.GlacierEnd);
+                    destination = GetCurrentCheckpointTransform();
                     break;
                 default:
-                    destination = ResolveTransform(centerMonumentSpawn, "CenterMonumentSpawn");
+                    SetCheckpoint(PlayerCheckpoint.Monument);
+                    destination = GetCurrentCheckpointTransform();
                     break;
             }
 
@@ -169,31 +201,212 @@ namespace AnEchoHasNoShape
         {
             if (string.Equals(pointName, "centermonument", System.StringComparison.OrdinalIgnoreCase))
             {
-                return ResolveTransform(centerMonumentSpawn, "CenterMonumentSpawn");
+                return ResolveCheckpoint(PlayerCheckpoint.Monument);
             }
 
             if (string.Equals(pointName, "glacierstart", System.StringComparison.OrdinalIgnoreCase))
             {
-                return ResolveTransform(glacierStartSpawn, "GlacierRespawn");
+                return ResolveCheckpoint(PlayerCheckpoint.GlacierStart);
+            }
+
+            if (string.Equals(pointName, "glaciermid", System.StringComparison.OrdinalIgnoreCase))
+            {
+                return ResolveCheckpoint(PlayerCheckpoint.GlacierMid);
             }
 
             if (string.Equals(pointName, "glacierend", System.StringComparison.OrdinalIgnoreCase))
             {
-                return ResolveTransform(glacierEndSpawn, "GlacierEnd");
+                return ResolveCheckpoint(PlayerCheckpoint.GlacierEnd);
             }
 
             return null;
         }
 
-        private static Transform ResolveTransform(Transform assigned, string objectName)
+        public bool SetCheckpoint(PlayerCheckpoint checkpoint)
+        {
+            Transform resolved = ResolveCheckpoint(checkpoint);
+            if (resolved == null)
+            {
+                Debug.LogWarning($"Checkpoint '{checkpoint}' could not find its scene locator.", this);
+                return false;
+            }
+
+            currentCheckpoint = checkpoint;
+            return true;
+        }
+
+        public void RegisterGlacierDeath()
+        {
+            if (currentCheckpoint == PlayerCheckpoint.Monument)
+            {
+                SetCheckpoint(PlayerCheckpoint.GlacierStart);
+            }
+        }
+
+        public Transform GetCurrentCheckpointTransform()
+        {
+            return ResolveCheckpoint(currentCheckpoint);
+        }
+
+        public bool TeleportPlayerToCheckpoint(FirstPersonController player = null)
+        {
+            Transform destination = GetCurrentCheckpointTransform();
+            return TeleportPlayerWithFade(player, destination);
+        }
+
+        public bool TeleportPlayerWithFade(FirstPersonController player, Transform destination)
+        {
+            if (checkpointTransitionActive)
+            {
+                return false;
+            }
+
+            if (player == null)
+            {
+                player = FindAnyObjectByType<FirstPersonController>();
+            }
+
+            if (destination == null || player == null)
+            {
+                Debug.LogWarning("Travel transition could not find the player or destination.", this);
+                return false;
+            }
+
+            StartCoroutine(CheckpointTeleportRoutine(player, destination));
+            return true;
+        }
+
+        private IEnumerator CheckpointTeleportRoutine(FirstPersonController player, Transform destination)
+        {
+            checkpointTransitionActive = true;
+
+            // Menus restore gameplay state immediately after invoking travel.
+            // Waiting one frame lets this transition capture and temporarily
+            // override that restored state instead of fighting it.
+            yield return null;
+
+            bool previousMovementState = player.playerCanMove;
+            bool previousCameraState = player.cameraCanMove;
+            player.playerCanMove = false;
+            player.cameraCanMove = false;
+
+            EnsureCheckpointFadeOverlay();
+            yield return FadeCheckpointOverlay(0f, 1f, checkpointFadeToBlackDuration);
+
+            Rigidbody body = player.GetComponent<Rigidbody>();
+            if (body != null)
+            {
+                body.linearVelocity = Vector3.zero;
+                body.angularVelocity = Vector3.zero;
+            }
+
+            player.TeleportTo(destination);
+            Physics.SyncTransforms();
+
+            if (checkpointBlackHoldDuration > 0f)
+            {
+                yield return new WaitForSecondsRealtime(checkpointBlackHoldDuration);
+            }
+
+            yield return FadeCheckpointOverlay(1f, 0f, checkpointFadeFromBlackDuration);
+
+            player.playerCanMove = previousMovementState;
+            player.cameraCanMove = previousCameraState;
+            checkpointTransitionActive = false;
+        }
+
+        private IEnumerator FadeCheckpointOverlay(float from, float to, float duration)
+        {
+            checkpointFadeCanvas.gameObject.SetActive(true);
+            checkpointFadeGroup.alpha = from;
+            float elapsed = 0f;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float progress = Mathf.Clamp01(elapsed / duration);
+                checkpointFadeGroup.alpha = Mathf.SmoothStep(from, to, progress);
+                yield return null;
+            }
+
+            checkpointFadeGroup.alpha = to;
+            if (to <= 0f)
+            {
+                checkpointFadeCanvas.gameObject.SetActive(false);
+            }
+        }
+
+        private void EnsureCheckpointFadeOverlay()
+        {
+            if (checkpointFadeCanvas != null)
+            {
+                return;
+            }
+
+            GameObject canvasObject = new GameObject("Checkpoint Fade (Runtime)")
+            {
+                hideFlags = HideFlags.DontSave
+            };
+            canvasObject.transform.SetParent(transform, false);
+
+            checkpointFadeCanvas = canvasObject.AddComponent<Canvas>();
+            checkpointFadeCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            checkpointFadeCanvas.sortingOrder = short.MaxValue;
+
+            CanvasScaler scaler = canvasObject.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight = 0.5f;
+
+            checkpointFadeGroup = canvasObject.AddComponent<CanvasGroup>();
+            checkpointFadeGroup.alpha = 0f;
+            checkpointFadeGroup.interactable = false;
+            checkpointFadeGroup.blocksRaycasts = false;
+
+            GameObject imageObject = new GameObject("Black", typeof(RectTransform), typeof(Image));
+            imageObject.transform.SetParent(canvasObject.transform, false);
+            RectTransform rect = (RectTransform)imageObject.transform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            imageObject.GetComponent<Image>().color = Color.black;
+
+            canvasObject.SetActive(false);
+        }
+
+        private Transform ResolveCheckpoint(PlayerCheckpoint checkpoint)
+        {
+            return checkpoint switch
+            {
+                PlayerCheckpoint.GlacierStart => ResolveTransform(
+                    glacierStartSpawn, "GlacierRespawnStart", "GlacierRespawn"),
+                PlayerCheckpoint.GlacierMid => ResolveTransform(
+                    glacierMidSpawn, "GlacierRespawnMid"),
+                PlayerCheckpoint.GlacierEnd => ResolveTransform(
+                    glacierEndSpawn, "GlacierRespawnEnd", "GlacierEnd"),
+                _ => ResolveTransform(
+                    centerMonumentSpawn, "MonumentSpawn", "CenterMonumentSpawn", "CenterSpawn")
+            };
+        }
+
+        private static Transform ResolveTransform(Transform assigned, params string[] objectNames)
         {
             if (assigned != null)
             {
                 return assigned;
             }
 
-            GameObject found = GameObject.Find(objectName);
-            return found != null ? found.transform : null;
+            foreach (string objectName in objectNames)
+            {
+                GameObject found = GameObject.Find(objectName);
+                if (found != null)
+                {
+                    return found.transform;
+                }
+            }
+
+            return null;
         }
 
         private static void EnsureEchoIgnored(string objectName)
@@ -271,6 +484,9 @@ namespace AnEchoHasNoShape
         private void OnValidate()
         {
             fogStrength = Mathf.Clamp(fogStrength, 0f, 0.5f);
+            checkpointFadeToBlackDuration = Mathf.Max(0.01f, checkpointFadeToBlackDuration);
+            checkpointBlackHoldDuration = Mathf.Max(0f, checkpointBlackHoldDuration);
+            checkpointFadeFromBlackDuration = Mathf.Max(0.01f, checkpointFadeFromBlackDuration);
 
             if (Application.isPlaying && Instance == this)
             {

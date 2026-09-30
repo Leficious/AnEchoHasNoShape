@@ -6,6 +6,15 @@ namespace AnEchoHasNoShape.Interaction
     [DisallowMultipleComponent]
     public sealed class ReadableTextInteractable : MonoBehaviour, IInteractable
     {
+        private enum CheckpointAfterReading
+        {
+            None,
+            Monument,
+            GlacierStart,
+            GlacierMid,
+            GlacierEnd
+        }
+
         [Header("Interaction Prompt")]
         [Tooltip("Completes the prompt 'Press F to ...'. Examples: Read, Listen, Examine.")]
         [SerializeField] private string interactionVerb = "Read";
@@ -28,6 +37,9 @@ namespace AnEchoHasNoShape.Interaction
 
         [Tooltip("Makes HiddenDoorStone ignore echoes and become passable after the first completed reading.")]
         [SerializeField] private bool openHiddenDoorAfterFirstRead;
+
+        [Tooltip("Optional checkpoint granted when this passage is completed for the first time. IceTabletMid and IceTabletEnd are also recognized automatically by name.")]
+        [SerializeField] private CheckpointAfterReading checkpointAfterFirstRead;
 
         private bool hasBeenRead;
 
@@ -82,6 +94,43 @@ namespace AnEchoHasNoShape.Interaction
             if (openHiddenDoorAfterFirstRead)
             {
                 OpenHiddenDoorStone();
+            }
+
+            if (recordProgress)
+            {
+                ApplyCheckpointAfterReading();
+            }
+        }
+
+        private void ApplyCheckpointAfterReading()
+        {
+            CheckpointAfterReading target = checkpointAfterFirstRead;
+            string normalizedName = gameObject.name.Replace(" ", string.Empty).ToLowerInvariant();
+
+            if (target == CheckpointAfterReading.None)
+            {
+                if (normalizedName == "icetabletmid")
+                {
+                    target = CheckpointAfterReading.GlacierMid;
+                }
+                else if (normalizedName == "icetabletend")
+                {
+                    target = CheckpointAfterReading.GlacierEnd;
+                }
+            }
+
+            GameManager.PlayerCheckpoint? checkpoint = target switch
+            {
+                CheckpointAfterReading.Monument => GameManager.PlayerCheckpoint.Monument,
+                CheckpointAfterReading.GlacierStart => GameManager.PlayerCheckpoint.GlacierStart,
+                CheckpointAfterReading.GlacierMid => GameManager.PlayerCheckpoint.GlacierMid,
+                CheckpointAfterReading.GlacierEnd => GameManager.PlayerCheckpoint.GlacierEnd,
+                _ => null
+            };
+
+            if (checkpoint.HasValue)
+            {
+                GameManager.Instance?.SetCheckpoint(checkpoint.Value);
             }
         }
 

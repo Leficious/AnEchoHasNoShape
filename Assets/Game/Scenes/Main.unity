@@ -1134,6 +1134,7 @@ MonoBehaviour:
   unlockEchoAfterFirstRead: 0
   triggerWorldReverberationAfterFirstRead: 1
   openHiddenDoorAfterFirstRead: 1
+  checkpointAfterFirstRead: 0
 --- !u!4 &111671011 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7355071063264183829, guid: 0fe9351d35c672f4d9561be43eb8d376, type: 3}
@@ -1759,7 +1760,7 @@ GameObject:
   m_Component:
   - component: {fileID: 218644707}
   m_Layer: 0
-  m_Name: GameRespawnMid
+  m_Name: GlacierRespawnMid
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3572,6 +3573,7 @@ GameObject:
   - component: {fileID: 384006019}
   - component: {fileID: 384006018}
   - component: {fileID: 384006017}
+  - component: {fileID: 9384006016}
   m_Layer: 0
   m_Name: Water Surface
   m_TagString: Untagged
@@ -3997,6 +3999,7 @@ MonoBehaviour:
   unlockEchoAfterFirstRead: 1
   triggerWorldReverberationAfterFirstRead: 0
   openHiddenDoorAfterFirstRead: 0
+  checkpointAfterFirstRead: 0
 --- !u!4 &415188096 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7355071063264183829, guid: 0fe9351d35c672f4d9561be43eb8d376, type: 3}
@@ -4460,7 +4463,7 @@ GameObject:
   m_Component:
   - component: {fileID: 526808962}
   m_Layer: 0
-  m_Name: CenterSpawn
+  m_Name: MonumentSpawn
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5207,6 +5210,7 @@ MonoBehaviour:
   unlockEchoAfterFirstRead: 0
   triggerWorldReverberationAfterFirstRead: 0
   openHiddenDoorAfterFirstRead: 0
+  checkpointAfterFirstRead: 2
 --- !u!4 &584586150 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1414037515230176631, guid: dab09d80e0d625246b3b3d4d83b6cedc, type: 3}
@@ -5638,7 +5642,7 @@ Transform:
   m_GameObject: {fileID: 607401490}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0.23711962, z: -0, w: 0.9714805}
-  m_LocalPosition: {x: -10.8, y: -21.4, z: 126.4}
+  m_LocalPosition: {x: -10.8, y: -19.8, z: 126.4}
   m_LocalScale: {x: 496.3145, y: 37.19248, z: 252.28456}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5677,10 +5681,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a4b7d136d85d4b74b83f0dd1989c9e71, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.Core.DeathRespawnTrigger
-  respawnPoint: {fileID: 1493934166}
-  fadeToBlackDuration: 0.55
-  blackHoldDuration: 0.15
-  fadeFromBlackDuration: 0.7
+  submergeDuration: 2
+  sinkSpeed: 2.5
+  deepSinkSpeed: 1
+  sinkSlowdownDepth: 2.5
+  verticalWaterResistance: 7.5
+  horizontalDamping: 0.9
+  waterEntryClip: {fileID: 8300000, guid: b13ea797bfa50ae40a1ee1516b7bc7c2, type: 3}
+  splashVolume: 1
+  underwaterColor: {r: 0.025, g: 0.18, b: 0.23, a: 1}
+  underwaterShimmer: {r: 0.22, g: 0.78, b: 0.88, a: 1}
+  lookUpAngle: 60
+  lookUpDuration: 0.58
+  cameraShakeAngle: 1.65
+  cameraShakeFrequency: 8.5
+  underwaterDimming: 0.52
+  underwaterEffectFadeIn: 0.34
+  fadeToBlackDuration: 1
+  blackHoldDuration: 0.5
+  fadeFromBlackDuration: 1
 --- !u!4 &608483206 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 6085943431925381541, guid: 84d4688c419feb144bd934538829507c, type: 3}
@@ -10824,6 +10843,7 @@ MonoBehaviour:
   unlockEchoAfterFirstRead: 0
   triggerWorldReverberationAfterFirstRead: 1
   openHiddenDoorAfterFirstRead: 0
+  checkpointAfterFirstRead: 4
 --- !u!1001 &1143404082
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -11554,6 +11574,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1175690197}
+  - component: {fileID: 91175690197}
+  - component: {fileID: 91175690198}
   m_Layer: 0
   m_Name: GlacialOcean
   m_TagString: Untagged
@@ -11584,10 +11606,13 @@ Transform:
   - {fileID: 1037330081}
   - {fileID: 1493934166}
   - {fileID: 218644707}
+  - {fileID: 2100599500}
   - {fileID: 262707335}
   - {fileID: 347382110}
   - {fileID: 384006020}
   - {fileID: 415210663}
+  - {fileID: 2138293522}
+  - {fileID: 2120299216}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1175717016
@@ -14976,11 +15001,15 @@ MonoBehaviour:
   fogStrength: 0.15
   glacierFogColor: {r: 0.782779, g: 0.881916, b: 0.95687324, a: 1}
   startWithEchoUnlocked: 0
+  checkpointFadeToBlackDuration: 0.25
+  checkpointBlackHoldDuration: 0.08
+  checkpointFadeFromBlackDuration: 0.7
   enableDevelopmentTools: 1
-  initialSpawnPoint: 0
-  tutorialCompleted: 0
+  initialSpawnPoint: 2
+  tutorialCompleted: 1
   centerMonumentSpawn: {fileID: 526808962}
   glacierStartSpawn: {fileID: 1493934166}
+  glacierMidSpawn: {fileID: 218644707}
   glacierEndSpawn: {fileID: 415210663}
 --- !u!1001 &1531469598
 PrefabInstance:
@@ -15297,32 +15326,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.Interaction.ReadableTextInteractable
   interactionVerb: Read
-  text: 'The sea keeps no faithful road.
+  text: 'The ice remembers your weight.
 
-    [important]What bears your gaze, may
-    not bear your weight.[/important]
-
-
-    Across the pale, some paths are seen,
-    some answered,
-
-    and some only wished into being.
+    [important]Should the pale reclaim you,
+    some trace may yet remain here.[/important]
 
 
-    [important]When sirens''
-    songs rise beyond the fog,
+    The light is still distant.
 
-    do not mistake their sweetness for direction.[/important]
-
-
-    The
-    song knows what you long to hear.
-
-    It does not know the way.'
+    Are
+    you certain it waits for you?'
   charactersPerSecond: 48
   unlockEchoAfterFirstRead: 0
   triggerWorldReverberationAfterFirstRead: 0
   openHiddenDoorAfterFirstRead: 0
+  checkpointAfterFirstRead: 3
 --- !u!1001 &1562782413
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -15665,6 +15683,133 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 6470854563025790685, guid: 95e97fca945928b438f6c2333429a44a, type: 3}
   m_PrefabInstance: {fileID: 1581126640}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1589817787
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1589817790}
+  - component: {fileID: 1589817789}
+  - component: {fileID: 1589817788}
+  m_Layer: 0
+  m_Name: GlacialGuide
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1589817788
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1589817787}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
+  m_UsePipelineSettings: 1
+  m_AdditionalLightsShadowResolutionTier: 2
+  m_CustomShadowLayers: 0
+  m_LightCookieSize: {x: 1, y: 1}
+  m_LightCookieOffset: {x: 0, y: 0}
+  m_SoftShadowQuality: 0
+  m_RenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_ShadowRenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_Version: 4
+  m_LightLayerMask: 1
+  m_ShadowLayerMask: 1
+  m_RenderingLayers: 1
+  m_ShadowRenderingLayers: 1
+--- !u!108 &1589817789
+Light:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1589817787}
+  m_Enabled: 1
+  serializedVersion: 13
+  m_Type: 2
+  m_Color: {r: 0.5161724, g: 0.9529846, b: 1, a: 1}
+  m_Intensity: 10
+  m_Range: 151.6
+  m_SpotAngle: 30
+  m_InnerSpotAngle: 21.80208
+  m_CookieSize2D: {x: 0.5, y: 0.5}
+  m_Shadows:
+    m_Type: 0
+    m_Resolution: -1
+    m_CustomResolution: -1
+    m_Strength: 1
+    m_Bias: 0.05
+    m_NormalBias: 0.4
+    m_NearPlane: 0.2
+    m_CullingMatrixOverride:
+      e00: 1
+      e01: 0
+      e02: 0
+      e03: 0
+      e10: 0
+      e11: 1
+      e12: 0
+      e13: 0
+      e20: 0
+      e21: 0
+      e22: 1
+      e23: 0
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+    m_UseCullingMatrixOverride: 0
+  m_Cookie: {fileID: 0}
+  m_DrawHalo: 0
+  m_Flare: {fileID: 0}
+  m_RenderMode: 0
+  m_CullingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_RenderingLayerMask: 1
+  m_Lightmapping: 4
+  m_LightShadowCasterMode: 0
+  m_AreaSize: {x: 1, y: 1}
+  m_BounceIntensity: 1
+  m_ColorTemperature: 8792
+  m_UseColorTemperature: 1
+  m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_UseBoundingSphereOverride: 0
+  m_UseViewFrustumForShadowCasterCull: 1
+  m_ForceVisible: 0
+  m_ShapeRadius: 0.025
+  m_ShadowAngle: 0
+  m_LightUnit: 1
+  m_LuxAtDistance: 1
+  m_EnableSpotReflector: 1
+--- !u!4 &1589817790
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1589817787}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -84.95757, y: 22.800003, z: 140.7002}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2120299216}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1605694715
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -18844,7 +18989,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2100599500}
   m_Layer: 0
-  m_Name: GameObject
+  m_Name: GlacierRespawnEnd
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -18858,18 +19003,50 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2100599499}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -192.13791, y: 98.43, z: 220.03}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -83.76148, y: 2.9300003, z: 137.88019}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 1175690197}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &2104629108 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2799333393686033891, guid: 78b6d940d79576544be8e6ec28c84a0a, type: 3}
   m_PrefabInstance: {fileID: 1708292990}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &2120299215
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2120299216}
+  m_Layer: 0
+  m_Name: Lights
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2120299216
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2120299215}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1589817790}
+  m_Father: {fileID: 1175690197}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &2124199839
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -19026,6 +19203,134 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4795398331380623558, guid: 85661282480f3b04383ded71791f6614, type: 3}
   m_PrefabInstance: {fileID: 2137610463}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &2138293517
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2138293522}
+  - component: {fileID: 2138293521}
+  - component: {fileID: 2138293520}
+  - component: {fileID: 2138293519}
+  - component: {fileID: 2138293518}
+  m_Layer: 0
+  m_Name: Ferry
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2138293518
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2138293517}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a73c16e80db749b39f245e6c8170a452, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.Interaction.FerrymanInteractable
+  interactionVerb: Take Ferry
+  question: Take the ferry back?
+  destination: {fileID: 1493934166}
+--- !u!65 &2138293519
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2138293517}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!23 &2138293520
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2138293517}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!33 &2138293521
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2138293517}
+  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!4 &2138293522
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2138293517}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -88.99357, y: -0.25, z: 131.59018}
+  m_LocalScale: {x: 2.177841, y: 1.7879, z: 4.353536}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1175690197}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &2139742267
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -19087,6 +19392,137 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 95e97fca945928b438f6c2333429a44a, type: 3}
+--- !u!114 &9384006016
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 384006016}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b2417a4ed0f45e7a60fffd75f4d27de, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.Echolocation.WorldReverberationWaterSurface
+  surfaceOffset: 0.018
+  rippleScale: 0.28
+  rippleThickness: 1.1
+  revealStrength: 0.72
+  surfaceOpacity: 0.38
+  surfaceColor: {r: 0.045, g: 0.19, b: 0.25, a: 1}
+  surfaceHighlightColor: {r: 0.16778788, g: 0.5871396, b: 0.66576815, a: 1}
+  surfaceWaveScale: 0.16
+  surfaceWaveHeight: 0.085
+  surfaceFogFadeStart: 1.03
+  surfaceFogFadeEnd: 35.4
+--- !u!114 &91175690197
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1175690196}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d72790f8db8c43d9842dc16d403245b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.FogLighting.GlacierAuroraRig
+  ribbons:
+  - name: Aurora Curtain A
+    localPosition: {x: 18, y: 76, z: 58}
+    localEulerAngles: {x: 0, y: -16, z: -3}
+    length: 182
+    height: 54
+    curvature: 31
+    irregularity: 5.5
+    seed: 1.37
+    lowerColor: {r: 0.055, g: 0.31, b: 0.48, a: 1}
+    upperColor: {r: 0.3, g: 0.84, b: 0.75, a: 1}
+    opacity: 0.48
+  - name: Aurora Curtain B
+    localPosition: {x: -32, y: 92, z: 102}
+    localEulerAngles: {x: 2, y: 21, z: 4}
+    length: 148
+    height: 43
+    curvature: -24
+    irregularity: 4.2
+    seed: 4.81
+    lowerColor: {r: 0.09, g: 0.28, b: 0.54, a: 1}
+    upperColor: {r: 0.32, g: 0.67, b: 0.88, a: 1}
+    opacity: 0.4
+  - name: Aurora Curtain C
+    localPosition: {x: 44, y: 108, z: 138}
+    localEulerAngles: {x: -2, y: -31, z: 2}
+    length: 124
+    height: 36
+    curvature: 19
+    irregularity: 3.5
+    seed: 8.26
+    lowerColor: {r: 0.12, g: 0.34, b: 0.47, a: 1}
+    upperColor: {r: 0.46, g: 0.76, b: 0.82, a: 1}
+    opacity: 0.34
+  - name: Aurora Curtain Left
+    localPosition: {x: -160, y: 82, z: 78}
+    localEulerAngles: {x: 1, y: 12, z: -5}
+    length: 116
+    height: 45
+    curvature: 21
+    irregularity: 4.8
+    seed: 11.42
+    lowerColor: {r: 0.055, g: 0.3, b: 0.45, a: 1}
+    upperColor: {r: 0.27, g: 0.88, b: 0.7, a: 1}
+    opacity: 0.38
+  - name: Aurora Curtain Right
+    localPosition: {x: 165, y: 94, z: 112}
+    localEulerAngles: {x: -1, y: -18, z: 5}
+    length: 108
+    height: 40
+    curvature: -18
+    irregularity: 4.1
+    seed: 15.73
+    lowerColor: {r: 0.085, g: 0.27, b: 0.52, a: 1}
+    upperColor: {r: 0.4, g: 0.72, b: 0.9, a: 1}
+    opacity: 0.35
+  horizontalSegments: 64
+  verticalSegments: 10
+  noiseScale: 0.035
+  noiseSpeed: 0.16
+  displacement: 2.4
+  emission: 2.6
+  spatialDrift: 3.5
+  spatialDriftSpeed: 0.08
+  rotationalDrift: 1.4
+  illuminateFog: 1
+  lightsPerRibbon: 4
+  lightIntensity: 96.3
+  lightRange: 260.3
+  lightVerticalOffset: -14
+  lightShimmerAmount: 0.38
+  lightShimmerSpeed: 0.5
+  lightDriftDistance: 13.3
+  lightDriftSpeed: 0.105
+--- !u!114 &91175690198
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1175690196}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e0dbf0a8d99425b9a3befad71555b40, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.FogLighting.GlacierSnowfallRig
+  emissionRate: 72
+  spawnArea: {x: 34, y: 2, z: 34}
+  spawnHeight: 13
+  particleLifetime: 8
+  fallSpeed: 2.1
+  particleSize: {x: 0.045, y: 0.12}
+  snowColor: {r: 0.83, g: 0.93, b: 1, a: 0.72}
+  horizontalWind: {x: 0.28, y: 0.11}
+  turbulence: 0.36
+  turbulenceScale: 0.28
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -19099,4 +19535,3 @@ SceneRoots:
   - {fileID: 1157609026}
   - {fileID: 1017929957}
   - {fileID: 1175690197}
-  - {fileID: 2100599500}

@@ -67,6 +67,14 @@ namespace AnEchoHasNoShape.UI
 
         private void Update()
         {
+            // The development console owns Escape while it is open. Checking both
+            // states keeps this independent of Unity's script execution order:
+            // either the console is still open, or it already consumed this frame.
+            if (RuntimeDebugConsole.IsOpen || RuntimeDebugConsole.ConsumedEscapeThisFrame)
+            {
+                return;
+            }
+
             if (InteractionTextPanel.Instance != null && InteractionTextPanel.Instance.IsOpen)
             {
                 return;
@@ -118,6 +126,11 @@ namespace AnEchoHasNoShape.UI
             Cursor.visible = true;
             menuRoot.SetActive(true);
             isOpen = true;
+
+            if (EventSystem.current != null)
+            {
+                EventSystem.current.SetSelectedGameObject(null);
+            }
         }
 
         public void Resume()
@@ -148,6 +161,19 @@ namespace AnEchoHasNoShape.UI
             else
             {
                 SceneManager.LoadScene(activeScene.name);
+            }
+        }
+
+        private void Unstuck()
+        {
+            FindPlayerController();
+            GameManager gameManager = GameManager.Instance != null
+                ? GameManager.Instance
+                : FindAnyObjectByType<GameManager>();
+
+            if (gameManager != null && gameManager.TeleportPlayerToCheckpoint(firstPersonController))
+            {
+                Resume();
             }
         }
 
@@ -287,41 +313,42 @@ namespace AnEchoHasNoShape.UI
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
                 Vector2.zero,
-                new Vector2(460f, 520f));
+                new Vector2(460f, 570f));
             Image panelImage = panel.gameObject.AddComponent<Image>();
             panelImage.color = PanelColor;
 
             CreateText("Title", panel, "AN ECHO HAS NO SHAPE", 27, FontStyle.Normal,
-                TextAnchor.MiddleCenter, TextColor, new Vector2(0f, 216f), new Vector2(400f, 42f), true);
+                TextAnchor.MiddleCenter, TextColor, new Vector2(0f, 238f), new Vector2(400f, 42f), true);
             CreateText("Subtitle", panel, "PAUSED", 12, FontStyle.Normal,
-                TextAnchor.MiddleCenter, MutedTextColor, new Vector2(0f, 188f), new Vector2(400f, 24f));
+                TextAnchor.MiddleCenter, MutedTextColor, new Vector2(0f, 210f), new Vector2(400f, 24f));
 
-            CreateButton("Resume", panel, "RESUME", new Vector2(0f, 140f), Resume);
-            CreateButton("Restart", panel, "RESTART", new Vector2(0f, 92f), Restart);
+            CreateButton("Resume", panel, "RESUME", new Vector2(0f, 165f), Resume);
+            CreateButton("Restart", panel, "RESTART", new Vector2(0f, 117f), Restart);
+            CreateButton("Unstuck", panel, "UNSTUCK", new Vector2(0f, 69f), Unstuck);
 
             CreateText("Mode Label", panel, "MODE", 13, FontStyle.Normal,
-                TextAnchor.MiddleLeft, MutedTextColor, new Vector2(-100f, 35f), new Vector2(100f, 26f));
-            modeDropdown = CreateDropdown(panel, new Vector2(55f, 35f));
+                TextAnchor.MiddleLeft, MutedTextColor, new Vector2(-100f, 14f), new Vector2(100f, 26f));
+            modeDropdown = CreateDropdown(panel, new Vector2(55f, 14f));
             modeDropdown.SetValueWithoutNotify(displayMode);
             modeDropdown.onValueChanged.AddListener(ApplyDisplayMode);
 
             CreateText("Volume Label", panel, "VOLUME", 13, FontStyle.Normal,
-                TextAnchor.MiddleLeft, MutedTextColor, new Vector2(-60f, -21f), new Vector2(180f, 26f));
+                TextAnchor.MiddleLeft, MutedTextColor, new Vector2(-60f, -42f), new Vector2(180f, 26f));
             volumeValueText = CreateText("Volume Value", panel, Mathf.RoundToInt(volume * 100f) + "%", 13,
-                FontStyle.Normal, TextAnchor.MiddleRight, TextColor, new Vector2(115f, -21f), new Vector2(70f, 26f));
-            Slider volumeSlider = CreateSlider("Volume Slider", panel, new Vector2(0f, -52f), 0f, 1f, volume);
+                FontStyle.Normal, TextAnchor.MiddleRight, TextColor, new Vector2(115f, -42f), new Vector2(70f, 26f));
+            Slider volumeSlider = CreateSlider("Volume Slider", panel, new Vector2(0f, -73f), 0f, 1f, volume);
             volumeSlider.onValueChanged.AddListener(ApplyVolume);
 
             CreateText("Sensitivity Label", panel, "SENSITIVITY", 13, FontStyle.Normal,
-                TextAnchor.MiddleLeft, MutedTextColor, new Vector2(-60f, -96f), new Vector2(180f, 26f));
+                TextAnchor.MiddleLeft, MutedTextColor, new Vector2(-60f, -117f), new Vector2(180f, 26f));
             sensitivityValueText = CreateText("Sensitivity Value", panel, sensitivity.ToString("0.0"), 13,
-                FontStyle.Normal, TextAnchor.MiddleRight, TextColor, new Vector2(115f, -96f), new Vector2(70f, 26f));
-            Slider sensitivitySlider = CreateSlider("Sensitivity Slider", panel, new Vector2(0f, -127f), 0.2f, 8f, sensitivity);
+                FontStyle.Normal, TextAnchor.MiddleRight, TextColor, new Vector2(115f, -117f), new Vector2(70f, 26f));
+            Slider sensitivitySlider = CreateSlider("Sensitivity Slider", panel, new Vector2(0f, -148f), 0.2f, 8f, sensitivity);
             sensitivitySlider.onValueChanged.AddListener(ApplySensitivity);
 
-            CreateButton("Quit", panel, "QUIT", new Vector2(0f, -190f), Quit);
+            CreateButton("Quit", panel, "QUIT", new Vector2(0f, -211f), Quit);
             CreateText("Hint", panel, "ESC  /  RESUME", 11, FontStyle.Normal,
-                TextAnchor.MiddleCenter, MutedTextColor, new Vector2(0f, -232f), new Vector2(400f, 22f));
+                TextAnchor.MiddleCenter, MutedTextColor, new Vector2(0f, -253f), new Vector2(400f, 22f));
         }
 
         private Button CreateButton(string name, Transform parent, string label, Vector2 position, UnityEngine.Events.UnityAction action)
@@ -334,6 +361,7 @@ namespace AnEchoHasNoShape.UI
             button.targetGraphic = image;
             button.transition = Selectable.Transition.ColorTint;
             button.colors = CreateColorBlock();
+            button.navigation = new Navigation { mode = Navigation.Mode.None };
             button.onClick.AddListener(action);
 
             RectTransform textRect = CreateRect("Label", rect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
@@ -485,7 +513,7 @@ namespace AnEchoHasNoShape.UI
                 normalColor = Color.white,
                 highlightedColor = new Color(1.28f, 1.28f, 1.28f, 1f),
                 pressedColor = new Color(1.55f, 1.48f, 1.25f, 1f),
-                selectedColor = new Color(1.28f, 1.28f, 1.28f, 1f),
+                selectedColor = Color.white,
                 disabledColor = new Color(0.45f, 0.45f, 0.45f, 0.6f),
                 colorMultiplier = 1f,
                 fadeDuration = 0.08f

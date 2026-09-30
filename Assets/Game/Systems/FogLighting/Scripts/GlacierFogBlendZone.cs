@@ -14,6 +14,8 @@ namespace AnEchoHasNoShape.FogLighting
         [SerializeField] private bool smoothTransition = true;
 
         private Transform player;
+        private GlacierAuroraRig auroraRig;
+        private GlacierSnowfallRig snowfallRig;
         private float lastAppliedBlend = -1f;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -70,6 +72,7 @@ namespace AnEchoHasNoShape.FogLighting
         private void Awake()
         {
             FindPlayer();
+            FindEnvironmentRigs();
         }
 
         private void Update()
@@ -77,6 +80,11 @@ namespace AnEchoHasNoShape.FogLighting
             if (player == null)
             {
                 FindPlayer();
+            }
+
+            if (auroraRig == null || snowfallRig == null)
+            {
+                FindEnvironmentRigs();
             }
 
             if (player == null || outerArea == null || innerArea == null || GameManager.Instance == null)
@@ -105,12 +113,29 @@ namespace AnEchoHasNoShape.FogLighting
                 GameManager.Instance.SetFogColorBlend(GameManager.Instance.GlacierFogColor, blend);
                 lastAppliedBlend = blend;
             }
+
+            // Keep this outside the fog-change guard so a rig discovered after
+            // the first frame still receives the current area blend.
+            if (auroraRig != null)
+            {
+                auroraRig.SetAreaBlend(blend);
+            }
+            if (snowfallRig != null)
+            {
+                snowfallRig.SetAreaBlend(blend);
+            }
         }
 
         private void FindPlayer()
         {
             FirstPersonController controller = FindAnyObjectByType<FirstPersonController>();
             player = controller != null ? controller.transform : null;
+        }
+
+        private void FindEnvironmentRigs()
+        {
+            auroraRig = FindAnyObjectByType<GlacierAuroraRig>();
+            snowfallRig = FindAnyObjectByType<GlacierSnowfallRig>();
         }
 
         private static float GetWorldRadius(SphereCollider sphere)
@@ -125,6 +150,15 @@ namespace AnEchoHasNoShape.FogLighting
             if (Application.isPlaying && GameManager.Instance != null)
             {
                 GameManager.Instance.SetFogColorBlend(GameManager.Instance.GlacierFogColor, 0f);
+            }
+
+            if (Application.isPlaying && auroraRig != null)
+            {
+                auroraRig.SetAreaBlend(0f);
+            }
+            if (Application.isPlaying && snowfallRig != null)
+            {
+                snowfallRig.SetAreaBlend(0f);
             }
 
             lastAppliedBlend = -1f;

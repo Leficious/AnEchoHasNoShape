@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: WaterSurfaceVisibilityRuntime
+  m_Shader: {fileID: 4800000, guid: 4c8e8353981e46da8418f3790b2fe2d5, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties:
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _FogFadeEnd: 85
+    - _FogFadeStart: 22
+    - _SurfaceOffset: 0.01
+    - _SurfaceOpacity: 0.38
+    - _WaveHeight: 0.085
+    - _WaveScale: 0.16
+    m_Colors:
+    - _HighlightColor: {r: 0.24, g: 0.68, b: 0.76, a: 1}
+    - _SurfaceColor: {r: 0.045, g: 0.19, b: 0.25, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

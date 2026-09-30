@@ -211,9 +211,10 @@ namespace AnEchoHasNoShape.Interaction
         private static readonly int ShimmerColorId = Shader.PropertyToID("_PhaseShimmerColor");
         private static readonly int DistortionId = Shader.PropertyToID("_PhaseDistortionStrength");
         private static readonly int VignetteId = Shader.PropertyToID("_PhaseVignetteStrength");
+        private static readonly int DimmingId = Shader.PropertyToID("_PhaseDimmingStrength");
         private static PhasePassageScreenEffect instance;
 
-        private readonly HashSet<PhaseThroughVolume> activeVolumes = new HashSet<PhaseThroughVolume>();
+        private readonly HashSet<Object> activeVolumes = new HashSet<Object>();
         private AudioLowPassFilter lowPassFilter;
         private bool createdLowPassFilter;
         private bool previousFilterEnabled;
@@ -227,11 +228,13 @@ namespace AnEchoHasNoShape.Interaction
         private Color shimmerColor = new Color(0.55f, 0.83f, 0.9f, 1f);
         private float distortionStrength = 0.024f;
         private float vignetteStrength = 1.45f;
+        private float dimmingStrength;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ClearStaleRuntimeEffects()
         {
             Shader.SetGlobalFloat(OpacityId, 0f);
+            Shader.SetGlobalFloat(DimmingId, 0f);
             PhasePassageScreenEffect[] staleEffects =
                 Resources.FindObjectsOfTypeAll<PhasePassageScreenEffect>();
             foreach (PhasePassageScreenEffect staleEffect in staleEffects)
@@ -246,14 +249,15 @@ namespace AnEchoHasNoShape.Interaction
         }
 
         public static void Enter(
-            PhaseThroughVolume source,
+            Object source,
             Color veilColor,
             Color shimmerColor,
             float opacity,
             float duration,
             float distortion,
             float vignette,
-            float cutoffFrequency)
+            float cutoffFrequency,
+            float dimming = 0f)
         {
             PhasePassageScreenEffect effect = GetOrCreate();
             effect.activeVolumes.Add(source);
@@ -265,11 +269,12 @@ namespace AnEchoHasNoShape.Interaction
             effect.shimmerColor = shimmerColor;
             effect.distortionStrength = Mathf.Clamp(distortion, 0f, 0.06f);
             effect.vignetteStrength = Mathf.Clamp(vignette, 0f, 3f);
+            effect.dimmingStrength = Mathf.Clamp01(dimming);
             effect.ApplyAppearanceGlobals();
             effect.BeginAudioMuffle();
         }
 
-        public static void Exit(PhaseThroughVolume source)
+        public static void Exit(Object source)
         {
             if (instance == null)
             {
@@ -314,6 +319,7 @@ namespace AnEchoHasNoShape.Interaction
             Shader.SetGlobalColor(ShimmerColorId, shimmerColor);
             Shader.SetGlobalFloat(DistortionId, distortionStrength);
             Shader.SetGlobalFloat(VignetteId, vignetteStrength);
+            Shader.SetGlobalFloat(DimmingId, dimmingStrength);
         }
 
         private void OnEnable()
@@ -400,6 +406,7 @@ namespace AnEchoHasNoShape.Interaction
         private void OnDestroy()
         {
             Shader.SetGlobalFloat(OpacityId, 0f);
+            Shader.SetGlobalFloat(DimmingId, 0f);
             if (instance == this)
             {
                 instance = null;

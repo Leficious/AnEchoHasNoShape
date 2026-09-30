@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Collections.Generic;
 using AnEchoHasNoShape.Echolocation;
 using AnEchoHasNoShape.Interaction;
 using UnityEngine;
@@ -9,9 +11,46 @@ namespace AnEchoHasNoShape
     [DisallowMultipleComponent]
     public sealed class RuntimeDebugConsole : MonoBehaviour
     {
+        private static RuntimeDebugConsole activeInstance;
+        private static int escapeConsumedFrame = -1;
+
+        public static bool IsOpen => activeInstance != null && activeInstance.consoleOpen;
+        public static bool ConsumedEscapeThisFrame => escapeConsumedFrame == Time.frameCount;
+
+        private static readonly string[] SuggestedCommands =
+        {
+            "/help",
+            "/god",
+            "/player",
+            "/tp centermonument",
+            "/tp glacierstart",
+            "/tp glaciermid",
+            "/tp glacierend",
+            "/echo unlock",
+            "/tutorial complete",
+            "/reverb"
+        };
+
+        private static readonly string[] SuggestionDescriptions =
+        {
+            "List available commands",
+            "Enable free-flight mode",
+            "Restore normal player controls",
+            "Teleport to the central monument",
+            "Teleport to the glacier entrance",
+            "Teleport to the glacier midpoint",
+            "Teleport to the glacier endpoint",
+            "Unlock the echo ability",
+            "Apply completed tutorial progression",
+            "Trigger a world reverberation"
+        };
+
         private Canvas canvas;
         private InputField input;
         private Text feedback;
+        private GameObject suggestionsPanel;
+        private Text suggestionsText;
+        private readonly List<string> currentSuggestions = new List<string>();
         private FirstPersonController player;
         private Rigidbody playerBody;
         private Collider playerCollider;
@@ -24,6 +63,9 @@ namespace AnEchoHasNoShape
         private bool previousColliderEnabled;
         private CursorLockMode previousCursorLock;
         private bool previousCursorVisible;
+        private float previousTimeScale = 1f;
+        private bool timeScaleCaptured;
+        private Coroutine focusRoutine;
         private Vector3 centerPosition;
         private Quaternion centerRotation;
         private bool centerPoseCaptured;
@@ -36,6 +78,7 @@ namespace AnEchoHasNoShape
                 return;
             }
 
+            activeInstance = this;
             BuildUI();
             canvas.gameObject.SetActive(false);
         }
@@ -56,7 +99,23 @@ namespace AnEchoHasNoShape
 
             if (consoleOpen)
             {
-                if (Input.GetKeyDown(KeyCode.Escape)) CloseConsole();
+                if (Input.GetKeyDown(KeyCode.Escape))
+                {
+                    escapeConsumedFrame = Time.frameCount;
+                    CloseConsole();
+                }
+                else if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                {
+                    Execute(input != null ? input.text : string.Empty);
+                }
+                else if (Input.GetKeyDown(KeyCode.Tab))
+                {
+                    AutocompleteFirstSuggestion();
+                }
+                else if (input != null && !input.isFocused && !Input.GetMouseButton(0))
+                {
+                    FocusInput();
+                }
                 return;
             }
 
@@ -69,6 +128,8 @@ namespace AnEchoHasNoShape
             consoleOpen = true;
             previousCursorLock = Cursor.lockState;
             previousCursorVisible = Cursor.visible;
+            previousTimeScale = Time.timeScale;
+            timeScaleCaptured = true;
             if (player != null)
             {
                 previousCameraCanMove = player.cameraCanMove;
@@ -77,17 +138,36 @@ namespace AnEchoHasNoShape
                 player.playerCanMove = false;
             }
 
-            canvas.gameObject.SetActive(true);
-            input.text = "/";
-            input.ActivateInputField();
-            input.caretPosition = input.text.Length;
+            Time.timeScale = 0f;
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
+            canvas.gameObject.SetActive(true);
+            input.text = "/";
+            UpdateSuggestions(input.text);
+            FocusInput();
+            if (focusRoutine != null)
+            {
+                StopCoroutine(focusRoutine);
+            }
+            focusRoutine = StartCoroutine(FocusInputNextFrame());
         }
 
         private void CloseConsole()
         {
             consoleOpen = false;
+            if (focusRoutine != null)
+            {
+                StopCoroutine(focusRoutine);
+                focusRoutine = null;
+            }
+            if (input != null)
+            {
+                input.DeactivateInputField();
+            }
+            if (suggestionsPanel != null)
+            {
+                suggestionsPanel.SetActive(false);
+            }
             canvas.gameObject.SetActive(false);
             if (player != null)
             {
@@ -97,6 +177,85 @@ namespace AnEchoHasNoShape
 
             Cursor.lockState = previousCursorLock;
             Cursor.visible = previousCursorVisible;
+            if (timeScaleCaptured)
+            {
+                Time.timeScale = previousTimeScale;
+                timeScaleCaptured = false;
+            }
+        }
+
+        private IEnumerator FocusInputNextFrame()
+        {
+            yield return null;
+            focusRoutine = null;
+            if (consoleOpen)
+            {
+                FocusInput();
+            }
+        }
+
+        private void FocusInput()
+        {
+            if (input == null)
+            {
+                return;
+            }
+
+            if (EventSystem.current != null)
+            {
+                EventSystem.current.SetSelectedGameObject(input.gameObject);
+            }
+            input.Select();
+            input.ActivateInputField();
+            input.caretPosition = input.text.Length;
+        }
+
+        private void UpdateSuggestions(string rawInput)
+        {
+            if (suggestionsPanel == null || suggestionsText == null)
+            {
+                return;
+            }
+
+            string prefix = (rawInput ?? string.Empty).Trim();
+            if (prefix.Length == 0)
+            {
+                prefix = "/";
+            }
+            else if (!prefix.StartsWith("/"))
+            {
+                prefix = "/" + prefix;
+            }
+
+            currentSuggestions.Clear();
+            List<string> displayLines = new List<string>();
+            for (int index = 0; index < SuggestedCommands.Length; index++)
+            {
+                string command = SuggestedCommands[index];
+                if (!command.StartsWith(prefix, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                currentSuggestions.Add(command);
+                displayLines.Add($"{command}    {SuggestionDescriptions[index]}");
+            }
+
+            bool showSuggestions = consoleOpen && currentSuggestions.Count > 0;
+            suggestionsPanel.SetActive(showSuggestions);
+            suggestionsText.text = showSuggestions ? string.Join("\n", displayLines) : string.Empty;
+        }
+
+        private void AutocompleteFirstSuggestion()
+        {
+            if (input == null || currentSuggestions.Count == 0)
+            {
+                return;
+            }
+
+            input.text = currentSuggestions[0];
+            input.caretPosition = input.text.Length;
+            FocusInput();
         }
 
         private void Execute(string rawCommand)
@@ -110,21 +269,24 @@ namespace AnEchoHasNoShape
             }
 
             string result;
+            bool closeAfterExecution = false;
             switch (parts[0].ToLowerInvariant())
             {
                 case "help":
-                    result = "/tp centermonument | /tp glacierstart | /tp glacierend | /god | /player | /echo unlock | /tutorial complete | /reverb";
+                    result = "/tp centermonument | /tp glacierstart | /tp glaciermid | /tp glacierend | /god | /player | /echo unlock | /tutorial complete | /reverb";
                     break;
                 case "tp":
-                    result = parts.Length > 1 ? Teleport(parts[1]) : "Usage: /tp <centermonument|glacierstart|glacierend>";
+                    result = parts.Length > 1 ? Teleport(parts[1]) : "Usage: /tp <centermonument|glacierstart|glaciermid|glacierend>";
                     break;
                 case "god":
                     SetGodMode(true);
                     result = "God mode enabled. WASD + Space/Ctrl, Shift to boost.";
+                    closeAfterExecution = true;
                     break;
                 case "player":
                     SetGodMode(false);
                     result = "Player controls restored.";
+                    closeAfterExecution = true;
                     break;
                 case "echo":
                     if (parts.Length > 1 && parts[1].Equals("unlock", System.StringComparison.OrdinalIgnoreCase))
@@ -153,7 +315,14 @@ namespace AnEchoHasNoShape
             }
 
             feedback.text = result;
+            if (closeAfterExecution)
+            {
+                Debug.Log(result, this);
+                CloseConsole();
+                return;
+            }
             input.text = "/";
+            UpdateSuggestions(input.text);
             input.ActivateInputField();
             input.caretPosition = input.text.Length;
         }
@@ -213,8 +382,8 @@ namespace AnEchoHasNoShape
                     playerBody.useGravity = previousGravity;
                 }
                 if (playerCollider != null) playerCollider.enabled = previousColliderEnabled;
-                player.playerCanMove = true;
-                player.cameraCanMove = true;
+                player.playerCanMove = !consoleOpen;
+                player.cameraCanMove = !consoleOpen;
                 if (consoleOpen)
                 {
                     // Closing the console after /player must restore normal
@@ -234,7 +403,15 @@ namespace AnEchoHasNoShape
             if (Input.GetKey(KeyCode.Space)) direction += Vector3.up;
             if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.C)) direction -= Vector3.up;
             float speed = Input.GetKey(KeyCode.LeftShift) ? 32f : 12f;
-            player.transform.position += direction.normalized * speed * Time.unscaledDeltaTime;
+            Vector3 movement = direction.normalized * speed * Time.unscaledDeltaTime;
+            if (playerBody != null && playerBody.isKinematic)
+            {
+                playerBody.position += movement;
+            }
+            else
+            {
+                player.transform.position += movement;
+            }
         }
 
         private void FindPlayer()
@@ -264,6 +441,7 @@ namespace AnEchoHasNoShape
             canvas = canvasObject.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 2000;
+            canvasObject.AddComponent<GraphicRaycaster>();
             CanvasScaler scaler = canvasObject.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);
@@ -279,6 +457,27 @@ namespace AnEchoHasNoShape
             feedback = CreateText(panel.transform, "Feedback", font, 22, new Vector2(0.03f, 0.48f), new Vector2(0.97f, 0.9f));
             feedback.text = "Development console — /help";
 
+            suggestionsPanel = new GameObject("Command Suggestions", typeof(RectTransform), typeof(Image));
+            RectTransform suggestionsRect = suggestionsPanel.GetComponent<RectTransform>();
+            suggestionsRect.SetParent(canvasObject.transform, false);
+            suggestionsRect.anchorMin = new Vector2(0.12f, 0.43f);
+            suggestionsRect.anchorMax = new Vector2(0.88f, 0.755f);
+            suggestionsRect.offsetMin = suggestionsRect.offsetMax = Vector2.zero;
+            Image suggestionsBackground = suggestionsPanel.GetComponent<Image>();
+            suggestionsBackground.color = new Color(0.035f, 0.062f, 0.07f, 0.95f);
+            suggestionsBackground.raycastTarget = false;
+            suggestionsText = CreateText(
+                suggestionsPanel.transform,
+                "Suggestions",
+                font,
+                19,
+                new Vector2(0.025f, 0.055f),
+                new Vector2(0.975f, 0.945f));
+            suggestionsText.alignment = TextAnchor.UpperLeft;
+            suggestionsText.lineSpacing = 1.08f;
+            suggestionsText.raycastTarget = false;
+            suggestionsPanel.SetActive(false);
+
             GameObject fieldObject = new GameObject("Command", typeof(RectTransform), typeof(Image), typeof(InputField));
             RectTransform fieldRect = fieldObject.GetComponent<RectTransform>();
             fieldRect.SetParent(panel.transform, false);
@@ -292,10 +491,7 @@ namespace AnEchoHasNoShape
             input.textComponent = inputText;
             input.targetGraphic = fieldObject.GetComponent<Image>();
             input.lineType = InputField.LineType.SingleLine;
-            input.onEndEdit.AddListener(value =>
-            {
-                if (consoleOpen && (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))) Execute(value);
-            });
+            input.onValueChanged.AddListener(UpdateSuggestions);
         }
 
         private static Text CreateText(Transform parent, string name, Font font, int size, Vector2 anchorMin, Vector2 anchorMax)
@@ -316,6 +512,15 @@ namespace AnEchoHasNoShape
 
         private void OnDestroy()
         {
+            if (activeInstance == this)
+            {
+                activeInstance = null;
+            }
+            if (timeScaleCaptured)
+            {
+                Time.timeScale = previousTimeScale;
+                timeScaleCaptured = false;
+            }
             if (godMode) SetGodMode(false);
         }
     }

@@ -27,6 +27,7 @@ Shader "An Echo Has No Shape/Phase Veil"
             float _PhaseOpacity;
             float _PhaseDistortionStrength;
             float _PhaseVignetteStrength;
+            float _PhaseDimmingStrength;
 
             float Hash21(float2 p)
             {
@@ -122,6 +123,8 @@ Shader "An Echo Has No Shape/Phase Veil"
                     0.64 + broadFog * 0.13 + warp * 0.06 + shimmeringVignette * 0.17);
                 half effectAmount = saturate(_PhaseOpacity * alphaShape);
                 half3 finalColor = lerp(originalScene.rgb, effectedScene, effectAmount);
+                half dimming = saturate(_PhaseDimmingStrength * effectAmount);
+                finalColor *= 1.0h - dimming;
                 return half4(finalColor, originalScene.a);
             }
             ENDHLSL
