@@ -1,0 +1,98 @@
+# Unity generated state
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Ll]ogs/
+[Uu]serSettings/
+[Mm]emoryCaptures/
+[Rr]ecordings/
+[Bb]uild/
+[Bb]uilds/
+
+# IDE and local tooling
+.vs/
+.vscode/
+.idea/
+.dotnet-cli/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Unity Asset Store packages are licensed dependencies, not redistributable
+# source. Restore them separately from the inventory document.
+/Assets/_*/
+/Assets/_*.meta
+
+# Third-party font binaries are restored separately until their license notices
+# are included alongside them.
+/Assets/Game/Art/Fonts/
+/Assets/Game/Art/Fonts.meta
+
+# Large project-authored binary media. Scenes, prefabs, materials, scripts,
+# shaders, configuration assets, and their metadata remain versioned.
+*.fbx
+*.fbx.meta
+*.FBX
+*.FBX.meta
+*.obj
+*.obj.meta
+*.blend
+*.blend.meta
+*.blend1
+*.blend1.meta
+*.3ds
+*.3ds.meta
+*.dae
+*.dae.meta
+*.png
+*.png.meta
+*.jpg
+*.jpg.meta
+*.jpeg
+*.jpeg.meta
+*.tga
+*.tga.meta
+*.tif
+*.tif.meta
+*.tiff
+*.tiff.meta
+*.psd
+*.psd.meta
+*.exr
+*.exr.meta
+*.hdr
+*.hdr.meta
+*.wav
+*.wav.meta
+*.mp3
+*.mp3.meta
+*.ogg
+*.ogg.meta
+*.flac
+*.flac.meta
+*.mp4
+*.mp4.meta
+*.mov
+*.mov.meta
+*.unitypackage
+*.unitypackage.meta
+
+# Terrain height/splat data is binary even though it uses the .asset suffix.
+/Assets/Game/Terrain/Data/*.asset
+/Assets/Game/Terrain/Data/*.asset.meta
+
+# Re-creatable ground-blend output. Keep the system source, not generated materials.
+/Assets/Game/Systems/GroundBlend/Generated/
+
+# Keep the small application icon in source control.
+!/Assets/Game/Art/Images/GameIcon-ShapelessEcho-v4.png
+!/Assets/Game/Art/Images/GameIcon-ShapelessEcho-v4.png.meta
