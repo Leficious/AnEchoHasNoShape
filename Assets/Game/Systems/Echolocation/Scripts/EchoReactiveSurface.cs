@@ -22,6 +22,7 @@ namespace AnEchoHasNoShape.Echolocation
         private static readonly int UseAlphaClipId = Shader.PropertyToID("_EchoUseAlphaClip");
         private static readonly int AlphaCutoffId = Shader.PropertyToID("_EchoAlphaCutoff");
         private static readonly int ObjectWireframeMultiplierId = Shader.PropertyToID("_ObjectWireframeMultiplier");
+        private static readonly int EchoOpacityId = Shader.PropertyToID("_EchoOpacity");
 
         [SerializeField, Min(0f)] private float surfaceOffset = 0.006f;
         [SerializeField, Min(0f)] private float outlineWidth = 0.025f;
@@ -181,12 +182,50 @@ namespace AnEchoHasNoShape.Echolocation
 
         private void ApplyTimedRevealState()
         {
-            if (outlineMaterials == null)
+            ApplyTimedRevealStateTo(outlineMaterials);
+            // Architecture fill and its depth mask share the outline lifetime.
+            ApplyTimedRevealStateTo(ringMaterials);
+        }
+
+        public void SetCityReveal(float amount, Color color)
+        {
+            ApplyFloat(ringMaterials, Shader.PropertyToID("_CityRevealAmount"), amount);
+            ApplyFloat(outlineMaterials, Shader.PropertyToID("_CityRevealAmount"), amount);
+            SetCityColor(ringMaterials, color);
+            SetCityColor(outlineMaterials, color);
+        }
+
+        public void SetCityPerspective(int perspective)
+        {
+            int id = Shader.PropertyToID("_CityPerspective");
+            ApplyFloat(ringMaterials, id, perspective);
+            ApplyFloat(outlineMaterials, id, perspective);
+        }
+
+        public void SetCityCharacterColor(Color color, bool allowCompletionGold = true)
+        {
+            float colorLock = allowCompletionGold ? 1f : 2f;
+            ApplyFloat(ringMaterials, Shader.PropertyToID("_LockCityCharacterColor"), colorLock);
+            ApplyFloat(outlineMaterials, Shader.PropertyToID("_LockCityCharacterColor"), colorLock);
+            SetCityColor(ringMaterials, color);
+            SetCityColor(outlineMaterials, color);
+        }
+
+        private static void SetCityColor(Material[] materials, Color color)
+        {
+            if (materials == null) return;
+            foreach (Material material in materials)
+                if (material != null) material.SetColor("_CityRevealColor", color);
+        }
+
+        private void ApplyTimedRevealStateTo(Material[] materials)
+        {
+            if (materials == null)
             {
                 return;
             }
 
-            foreach (Material material in outlineMaterials)
+            foreach (Material material in materials)
             {
                 if (material != null)
                 {
@@ -235,6 +274,14 @@ namespace AnEchoHasNoShape.Echolocation
                     : null;
                 bool vegetation = IsVegetationMaterial(sourceMaterial);
                 material.SetFloat("_RevealMultiplier", revealMultiplier * (vegetation ? 0.62f : 1f));
+                if (vegetation)
+                {
+                    // Leaf cards should read as a soft translucent mass instead
+                    // of reaching the same solid white as terrain and stone.
+                    material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+                    material.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+                    material.SetFloat(EchoOpacityId, 0.32f);
+                }
                 material.SetFloat("_DiffusionStrength", diffusionStrength);
                 material.SetFloat(PlayerEchoMaskId, 1f);
                 material.SetFloat(SirenEchoMaskId, sirenEchoMask);
@@ -288,6 +335,13 @@ namespace AnEchoHasNoShape.Echolocation
             return namedCard || transparentVegetation;
         }
 
+        public void RefreshSurfaceProfile()
+        {
+            EchoSurfaceProfile profile = GetComponentInParent<EchoSurfaceProfile>(true);
+            ApplyProfile(ringMaterials, profile, false);
+            ApplyProfile(outlineMaterials, profile, true);
+        }
+
         private void ApplyProfile(Material[] materials, EchoSurfaceProfile profile, bool outlineMode)
         {
             if (materials == null) return;
@@ -295,6 +349,19 @@ namespace AnEchoHasNoShape.Echolocation
             {
                 Material material = materials[index];
                 if (material == null) continue;
+                bool architecture = profile != null && profile.SoftArchitecture;
+                material.SetFloat("_SoftArchitecture", architecture ? 1f : 0f);
+                material.SetShaderPassEnabled("EchoArchitectureDepth", architecture && !outlineMode);
+                if (architecture)
+                {
+                    material.SetColor("_ArchitectureTint", profile.FillTint);
+                    material.SetFloat("_ArchitectureBrightness", outlineMode ? profile.OutlineBrightness : profile.FillBrightness);
+                    material.SetFloat("_ArchitectureShading", outlineMode ? 0f : profile.DirectionalShading);
+                    Bounds bounds = sourceRenderer.bounds;
+                    material.SetVector("_ArchitectureGroundFade", new Vector4(
+                        bounds.min.y, Mathf.Max(0.001f, bounds.size.y * profile.GroundFadeHeightFraction),
+                        profile.GroundFadeHeightFraction > 0f ? 1f : 0f, 0f));
+                }
                 Material source = sourceRenderer != null && index < sourceRenderer.sharedMaterials.Length
                     ? sourceRenderer.sharedMaterials[index] : null;
                 bool vegetation = IsVegetationMaterial(source);

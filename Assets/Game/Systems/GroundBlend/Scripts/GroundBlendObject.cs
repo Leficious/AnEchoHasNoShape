@@ -210,12 +210,12 @@ namespace AnEchoHasNoShape.GroundBlend
 
         private void OnDestroy()
         {
-            foreach (BlendProxy proxy in proxies) DestroyObject(proxy.GameObject);
+            foreach (BlendProxy proxy in proxies) DestroyOwnedObject(proxy.GameObject);
             proxies.Clear();
-            DestroyObject(overlayMaterial);
+            DestroyOwnedObject(overlayMaterial);
         }
 
-        private static void DestroyObject(Object target)
+        private static void DestroyOwnedObject(Object target)
         {
             if (target == null) return;
             if (Application.isPlaying) Destroy(target);

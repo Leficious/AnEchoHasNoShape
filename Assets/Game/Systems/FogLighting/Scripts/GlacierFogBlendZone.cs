@@ -6,6 +6,8 @@ namespace AnEchoHasNoShape.FogLighting
     [DisallowMultipleComponent]
     public sealed class GlacierFogBlendZone : MonoBehaviour
     {
+        public static float CurrentAreaBlend { get; private set; }
+
         [Header("Blend Areas")]
         [SerializeField] private SphereCollider outerArea;
         [SerializeField] private SphereCollider innerArea;
@@ -17,6 +19,12 @@ namespace AnEchoHasNoShape.FogLighting
         private GlacierAuroraRig auroraRig;
         private GlacierSnowfallRig snowfallRig;
         private float lastAppliedBlend = -1f;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetSharedState()
+        {
+            CurrentAreaBlend = 0f;
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void InstallFromAuthoredAreas()
@@ -114,6 +122,8 @@ namespace AnEchoHasNoShape.FogLighting
                 lastAppliedBlend = blend;
             }
 
+            CurrentAreaBlend = blend;
+
             // Keep this outside the fog-change guard so a rig discovered after
             // the first frame still receives the current area blend.
             if (auroraRig != null)
@@ -162,6 +172,7 @@ namespace AnEchoHasNoShape.FogLighting
             }
 
             lastAppliedBlend = -1f;
+            CurrentAreaBlend = 0f;
         }
 
         private void OnValidate()

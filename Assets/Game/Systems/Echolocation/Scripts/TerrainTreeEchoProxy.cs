@@ -72,7 +72,7 @@ namespace AnEchoHasNoShape.Echolocation
                     continue;
                 }
 
-                foreach (MeshRenderer sourceRenderer in GetFirstLodRenderers(prefab))
+                foreach (MeshRenderer sourceRenderer in GetEchoLodRenderers(prefab))
                 {
                     MeshFilter sourceFilter = sourceRenderer.GetComponent<MeshFilter>();
                     Mesh sourceMesh = sourceFilter != null ? sourceFilter.sharedMesh : null;
@@ -174,36 +174,69 @@ namespace AnEchoHasNoShape.Echolocation
             renderer.enabled = false;
         }
 
-        private static IEnumerable<MeshRenderer> GetFirstLodRenderers(GameObject prefab)
+        private static IEnumerable<MeshRenderer> GetEchoLodRenderers(GameObject prefab)
         {
+            var lodManagedRenderers = new HashSet<Renderer>();
+            var echoLodRenderers = new HashSet<Renderer>();
+            foreach (LODGroup lodGroup in prefab.GetComponentsInChildren<LODGroup>(true))
+            {
+                LOD[] lods = lodGroup.GetLODs();
+                for (int lodIndex = 0; lodIndex < lods.Length; lodIndex++)
+                {
+                    foreach (Renderer renderer in lods[lodIndex].renderers)
+                    {
+                        if (renderer == null)
+                        {
+                            continue;
+                        }
+                        lodManagedRenderers.Add(renderer);
+                    }
+                }
+
+                // LOD1 is substantially cheaper on dense terrain vegetation and
+                // reads nearly identically once reduced to the echo treatment.
+                // Pine LOD1 uses aggressively simplified needle cards, however,
+                // which become conspicuous under the flat echo overlay. Keep the
+                // detailed pine silhouette while leaving other vegetation cheap.
+                int preferredIndex = lods.Length > 1 && !RequiresDetailedEchoLod(prefab)
+                    ? 1
+                    : 0;
+                bool foundMeshRenderer = false;
+                foreach (Renderer renderer in lods[preferredIndex].renderers)
+                {
+                    if (renderer is MeshRenderer)
+                    {
+                        echoLodRenderers.Add(renderer);
+                        foundMeshRenderer = true;
+                    }
+                }
+
+                if (!foundMeshRenderer && preferredIndex != 0)
+                {
+                    foreach (Renderer renderer in lods[0].renderers)
+                    {
+                        if (renderer is MeshRenderer)
+                        {
+                            echoLodRenderers.Add(renderer);
+                        }
+                    }
+                }
+            }
+
             MeshRenderer[] renderers = prefab.GetComponentsInChildren<MeshRenderer>(true);
             foreach (MeshRenderer renderer in renderers)
             {
-                LODGroup lodGroup = renderer.GetComponentInParent<LODGroup>();
-                if (lodGroup == null || IsInFirstLod(renderer, lodGroup))
+                if (!lodManagedRenderers.Contains(renderer) || echoLodRenderers.Contains(renderer))
                 {
                     yield return renderer;
                 }
             }
         }
 
-        private static bool IsInFirstLod(Renderer renderer, LODGroup lodGroup)
+        private static bool RequiresDetailedEchoLod(GameObject prefab)
         {
-            LOD[] lods = lodGroup.GetLODs();
-            if (lods.Length == 0)
-            {
-                return true;
-            }
-
-            foreach (Renderer firstLodRenderer in lods[0].renderers)
-            {
-                if (firstLodRenderer == renderer)
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return prefab != null &&
+                prefab.name.IndexOf("Pine", System.StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private void OnDestroy()

@@ -1,5 +1,7 @@
 using System.Collections;
 using System;
+using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -174,6 +176,8 @@ namespace AnEchoHasNoShape.Interaction
         private IEnumerator TypeContent(float charactersPerSecond)
         {
             float baseDelay = 1f / charactersPerSecond;
+            StringBuilder typedContent = new StringBuilder(fullContent.Length);
+            List<string> activeClosingTags = new List<string>(4);
 
             for (int index = 0; index < fullContent.Length; index++)
             {
@@ -186,13 +190,26 @@ namespace AnEchoHasNoShape.Interaction
                     int tagEnd = fullContent.IndexOf('>', index);
                     if (tagEnd >= index)
                     {
-                        bodyText.text += fullContent.Substring(index, tagEnd - index + 1);
+                        string tag = fullContent.Substring(index, tagEnd - index + 1);
+                        typedContent.Append(tag);
+                        UpdateActiveRichTextTags(tag, activeClosingTags);
                         index = tagEnd;
                         continue;
                     }
                 }
 
-                bodyText.text += character;
+                typedContent.Append(character);
+                StringBuilder displayedContent = new StringBuilder(typedContent.Length + activeClosingTags.Count * 10);
+                displayedContent.Append(typedContent);
+                for (int tagIndex = activeClosingTags.Count - 1; tagIndex >= 0; tagIndex--)
+                {
+                    displayedContent.Append(activeClosingTags[tagIndex]);
+                }
+
+                // Legacy UI Text displays an opening rich-text tag literally until
+                // its closing tag exists. Close active tags only in the displayed
+                // copy while the underlying typewriter continues through the text.
+                bodyText.text = displayedContent.ToString();
                 RefreshTextLayout();
 
                 if (followTypedText)
@@ -225,6 +242,38 @@ namespace AnEchoHasNoShape.Interaction
                 textScrollRect.verticalNormalizedPosition = 0f;
             }
             hintText.text = "F  /  CLOSE";
+        }
+
+        private static void UpdateActiveRichTextTags(string tag, List<string> activeClosingTags)
+        {
+            if (tag.StartsWith("<color=", StringComparison.OrdinalIgnoreCase))
+            {
+                activeClosingTags.Add("</color>");
+            }
+            else if (tag.StartsWith("<size=", StringComparison.OrdinalIgnoreCase))
+            {
+                activeClosingTags.Add("</size>");
+            }
+            else if (tag.Equals("</color>", StringComparison.OrdinalIgnoreCase))
+            {
+                RemoveLastClosingTag(activeClosingTags, "</color>");
+            }
+            else if (tag.Equals("</size>", StringComparison.OrdinalIgnoreCase))
+            {
+                RemoveLastClosingTag(activeClosingTags, "</size>");
+            }
+        }
+
+        private static void RemoveLastClosingTag(List<string> activeClosingTags, string closingTag)
+        {
+            for (int index = activeClosingTags.Count - 1; index >= 0; index--)
+            {
+                if (activeClosingTags[index].Equals(closingTag, StringComparison.OrdinalIgnoreCase))
+                {
+                    activeClosingTags.RemoveAt(index);
+                    return;
+                }
+            }
         }
 
         private void CompleteTyping()

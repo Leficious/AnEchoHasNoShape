@@ -16,6 +16,20 @@ namespace AnEchoHasNoShape.Echolocation
     {
         [SerializeField] private IcebergEchoState state;
 
+        [Header("Fake Buoyancy")]
+        [SerializeField] private bool enableFakeBuoyancy = true;
+        [SerializeField, Min(0f)] private float bobHeight = .045f;
+        [SerializeField, Min(.25f)] private float bobCycleSeconds = 5.5f;
+        [SerializeField, Min(0f)] private float driftDistance = .1f;
+        [SerializeField, Min(.5f)] private float driftCycleSeconds = 14f;
+        [SerializeField, Min(0f)] private float tiltDegrees = .3f;
+
+        [Header("Landing Response")]
+        [SerializeField, Min(0f)] private float landingDip = .11f;
+        [SerializeField, Min(0f)] private float standingSink = .018f;
+        [SerializeField, Min(0f)] private float landingSpring = 24f;
+        [SerializeField, Min(0f)] private float landingDamping = 7.5f;
+
         public IcebergEchoState State => state;
 
         public void Configure(IcebergEchoState newState)
@@ -52,6 +66,7 @@ namespace AnEchoHasNoShape.Echolocation
         private void Awake()
         {
             ApplyState();
+            InstallFakeBuoyancy();
         }
 
         private void OnEnable()
@@ -62,11 +77,67 @@ namespace AnEchoHasNoShape.Echolocation
         private void OnValidate()
         {
             ApplyState();
+
+            if (Application.isPlaying)
+            {
+                InstallFakeBuoyancy();
+            }
         }
 
         private void OnTransformChildrenChanged()
         {
             ApplyState();
+
+            if (Application.isPlaying)
+            {
+                InstallFakeBuoyancy();
+            }
+        }
+
+        private void InstallFakeBuoyancy()
+        {
+            if (!Application.isPlaying || !enableFakeBuoyancy)
+            {
+                return;
+            }
+
+            bool collisionEnabled = state != IcebergEchoState.VisibleFalse;
+            for (int index = 0; index < transform.childCount; index++)
+            {
+                Transform iceberg = transform.GetChild(index);
+                FakeIcebergBuoyancy buoyancy = iceberg.GetComponent<FakeIcebergBuoyancy>();
+                if (buoyancy == null)
+                {
+                    buoyancy = iceberg.gameObject.AddComponent<FakeIcebergBuoyancy>();
+                }
+
+                buoyancy.Configure(
+                    collisionEnabled,
+                    StableSeed(iceberg.name, index),
+                    bobHeight,
+                    bobCycleSeconds,
+                    driftDistance,
+                    driftCycleSeconds,
+                    tiltDegrees,
+                    landingDip,
+                    standingSink,
+                    landingSpring,
+                    landingDamping);
+            }
+        }
+
+        private static int StableSeed(string objectName, int siblingIndex)
+        {
+            unchecked
+            {
+                int hash = 17;
+                for (int index = 0; index < objectName.Length; index++)
+                {
+                    hash = hash * 31 + objectName[index];
+                }
+
+                return hash * 31 + siblingIndex;
+            }
         }
     }
 }

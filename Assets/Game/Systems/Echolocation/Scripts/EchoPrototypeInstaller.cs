@@ -7,6 +7,13 @@ namespace AnEchoHasNoShape.Echolocation
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         public static void Install()
         {
+            // Supply the city treatment before constructing overlay materials.
+            // Keep authored profiles intact, including an intentional opt-out.
+            GameObject city = GameObject.Find("UnrememberedCity");
+            if (city != null && city.GetComponent<EchoSurfaceProfile>() == null)
+                city.AddComponent<EchoSurfaceProfile>().ConfigureSoftArchitecture();
+            CitySequenceController.Install(city);
+
             GameObject player = GameObject.FindWithTag("Player");
             if (player != null && player.GetComponent<EchoPulseController>() == null)
             {
@@ -30,6 +37,11 @@ namespace AnEchoHasNoShape.Echolocation
                     if (renderer.GetComponent<WorldReverberationWaterSurface>() == null)
                     {
                         renderer.gameObject.AddComponent<WorldReverberationWaterSurface>();
+                    }
+
+                    if (renderer.GetComponent<WaterProximityAudio>() == null)
+                    {
+                        renderer.gameObject.AddComponent<WaterProximityAudio>();
                     }
 
                     continue;

@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using AnEchoHasNoShape.Interaction;
 
@@ -144,24 +143,6 @@ namespace AnEchoHasNoShape.UI
             menuRoot.SetActive(false);
             RestoreGameplayState();
             isOpen = false;
-        }
-
-        private void Restart()
-        {
-            SaveSettings();
-            Time.timeScale = 1f;
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
-
-            Scene activeScene = SceneManager.GetActiveScene();
-            if (activeScene.buildIndex >= 0)
-            {
-                SceneManager.LoadScene(activeScene.buildIndex);
-            }
-            else
-            {
-                SceneManager.LoadScene(activeScene.name);
-            }
         }
 
         private void Unstuck()
@@ -323,8 +304,7 @@ namespace AnEchoHasNoShape.UI
                 TextAnchor.MiddleCenter, MutedTextColor, new Vector2(0f, 210f), new Vector2(400f, 24f));
 
             CreateButton("Resume", panel, "RESUME", new Vector2(0f, 165f), Resume);
-            CreateButton("Restart", panel, "RESTART", new Vector2(0f, 117f), Restart);
-            CreateButton("Unstuck", panel, "UNSTUCK", new Vector2(0f, 69f), Unstuck);
+            CreateButton("Unstuck", panel, "UNSTUCK", new Vector2(0f, 117f), Unstuck);
 
             CreateText("Mode Label", panel, "MODE", 13, FontStyle.Normal,
                 TextAnchor.MiddleLeft, MutedTextColor, new Vector2(-100f, 14f), new Vector2(100f, 26f));

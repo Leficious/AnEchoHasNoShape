@@ -72,9 +72,9 @@ namespace AnEchoHasNoShape.FogLighting
 
         [Header("Fog Illumination")]
         [SerializeField] private bool illuminateFog = true;
-        [SerializeField, Range(1, 4)] private int lightsPerRibbon = 3;
+        [SerializeField, Range(1, 2)] private int lightsPerRibbon = 1;
         [SerializeField, Min(0f)] private float lightIntensity = 7f;
-        [SerializeField, Min(1f)] private float lightRange = 78f;
+        [SerializeField, Min(1f)] private float lightRange = 140f;
         [Tooltip("Places the fog lights beneath the visual curtains.")]
         [SerializeField] private float lightVerticalOffset = -14f;
         [Tooltip("Irregular intensity and color variation in the volumetric glow.")]
@@ -83,6 +83,12 @@ namespace AnEchoHasNoShape.FogLighting
         [Tooltip("How far each fog light wanders beneath its curtain.")]
         [SerializeField, Range(0f, 40f)] private float lightDriftDistance = 11f;
         [SerializeField, Range(0f, 1f)] private float lightDriftSpeed = 0.11f;
+
+        [Header("Prismatic Fog Light Color")]
+        [SerializeField, Range(0f, 1f)] private float prismaticBlend = 0.78f;
+        [SerializeField, Range(0f, 1f)] private float prismaticSaturation = 0.72f;
+        [SerializeField, Range(0f, 0.5f)] private float prismaticShiftSpeed = 0.012f;
+        [SerializeField, Range(0f, 0.25f)] private float prismaticShimmer = 0.018f;
 
         private GameObject generatedRoot;
         private readonly List<Material> generatedMaterials = new List<Material>();
@@ -127,13 +133,17 @@ namespace AnEchoHasNoShape.FogLighting
             spatialDrift = Mathf.Clamp(spatialDrift, 0f, 20f);
             spatialDriftSpeed = Mathf.Clamp01(spatialDriftSpeed);
             rotationalDrift = Mathf.Clamp(rotationalDrift, 0f, 10f);
-            lightsPerRibbon = Mathf.Clamp(lightsPerRibbon, 1, 4);
+            lightsPerRibbon = Mathf.Clamp(lightsPerRibbon, 1, 2);
             lightIntensity = Mathf.Max(0f, lightIntensity);
             lightRange = Mathf.Max(1f, lightRange);
             lightShimmerAmount = Mathf.Clamp01(lightShimmerAmount);
             lightShimmerSpeed = Mathf.Clamp(lightShimmerSpeed, 0f, 4f);
             lightDriftDistance = Mathf.Clamp(lightDriftDistance, 0f, 40f);
             lightDriftSpeed = Mathf.Clamp01(lightDriftSpeed);
+            prismaticBlend = Mathf.Clamp01(prismaticBlend);
+            prismaticSaturation = Mathf.Clamp01(prismaticSaturation);
+            prismaticShiftSpeed = Mathf.Clamp(prismaticShiftSpeed, 0f, 0.5f);
+            prismaticShimmer = Mathf.Clamp(prismaticShimmer, 0f, 0.25f);
 
             if (ribbons == null || ribbons.Length == 0)
             {
@@ -213,12 +223,12 @@ namespace AnEchoHasNoShape.FogLighting
                 }
             }
 
-            bool lightsVisible = !Application.isPlaying || areaVisibilityBlend > 0.001f;
-            foreach (GeneratedFogLight generatedLight in generatedFogLights)
+            for (int index = 0; index < generatedFogLights.Count; index++)
             {
+                GeneratedFogLight generatedLight = generatedFogLights[index];
                 if (generatedLight.light != null)
                 {
-                    generatedLight.light.enabled = lightsVisible;
+                    generatedLight.light.enabled = !Application.isPlaying || GetFogLightBlend(index) > 0.001f;
                 }
             }
         }
@@ -415,25 +425,42 @@ namespace AnEchoHasNoShape.FogLighting
 
             float shimmerTime = time * lightShimmerSpeed * Mathf.PI * 2f;
             float driftTime = time * lightDriftSpeed * Mathf.PI * 2f;
-            foreach (GeneratedFogLight generatedLight in generatedFogLights)
+            for (int index = 0; index < generatedFogLights.Count; index++)
             {
+                GeneratedFogLight generatedLight = generatedFogLights[index];
                 if (generatedLight.transform == null || generatedLight.light == null)
                 {
                     continue;
                 }
 
+                float fogLightBlend = GetFogLightBlend(index);
+                generatedLight.light.enabled = !Application.isPlaying || fogLightBlend > 0.001f;
                 float broadShimmer = Mathf.Sin(shimmerTime + generatedLight.phase);
                 float fineShimmer = Mathf.Sin(shimmerTime * 2.37f + generatedLight.phase * 1.31f);
                 float shimmer = broadShimmer * 0.68f + fineShimmer * 0.32f;
                 generatedLight.light.intensity = generatedLight.baseIntensity
                     * Mathf.Max(0.12f, 1f + shimmer * lightShimmerAmount)
-                    * areaVisibilityBlend;
+                    * fogLightBlend;
 
                 float colorShift = 0.5f + broadShimmer * 0.18f;
-                generatedLight.light.color = Color.Lerp(
+                Color atmosphericColor = Color.Lerp(
                     generatedLight.lowerColor,
                     generatedLight.upperColor,
                     colorShift);
+                float hueOffset = generatedFogLights.Count > 0
+                    ? (float)index / generatedFogLights.Count
+                    : 0f;
+                float palettePosition = Mathf.PingPong(
+                    hueOffset
+                    + generatedLight.phase * 0.061f
+                    + time * prismaticShiftSpeed
+                    + broadShimmer * prismaticShimmer,
+                    1f);
+                // Keep the aurora in its cool luminous palette: warm yellow into
+                // green, cyan, and blue, without cycling through red or magenta.
+                float hue = Mathf.Lerp(0.14f, 0.62f, palettePosition);
+                Color prismaticColor = Color.HSVToRGB(hue, prismaticSaturation, 1f, true);
+                generatedLight.light.color = Color.Lerp(atmosphericColor, prismaticColor, prismaticBlend);
 
                 float horizontalDrift = Mathf.Sin(driftTime + generatedLight.phase);
                 float verticalDrift = Mathf.Sin(driftTime * 0.57f + generatedLight.phase * 1.49f);
@@ -443,6 +470,21 @@ namespace AnEchoHasNoShape.FogLighting
                     verticalDrift * lightDriftDistance * 0.18f,
                     depthDrift * lightDriftDistance * 0.36f);
             }
+        }
+
+        private float GetFogLightBlend(int lightIndex)
+        {
+            if (!Application.isPlaying)
+            {
+                return 1f;
+            }
+
+            int lastIndex = Mathf.Max(1, generatedFogLights.Count - 1);
+            float sequence = Mathf.Clamp01((float)lightIndex / lastIndex);
+            float activationStart = Mathf.Lerp(0.02f, 0.55f, sequence);
+            float activationEnd = Mathf.Min(1f, activationStart + 0.22f);
+            float blend = Mathf.InverseLerp(activationStart, activationEnd, areaVisibilityBlend);
+            return Mathf.SmoothStep(0f, 1f, blend);
         }
 
         private static float GetAnimationTime()

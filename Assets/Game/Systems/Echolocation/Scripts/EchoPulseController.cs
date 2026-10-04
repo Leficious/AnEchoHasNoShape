@@ -1,4 +1,5 @@
 using UnityEngine;
+using AnEchoHasNoShape.Core;
 using AnEchoHasNoShape.Interaction;
 
 namespace AnEchoHasNoShape.Echolocation
@@ -47,7 +48,7 @@ namespace AnEchoHasNoShape.Echolocation
         [SerializeField, Min(0.01f)] private float trailLength = 2.5f;
         [SerializeField, Min(0.1f)] private float fadeOutDistance = 10f;
         [SerializeField, Min(0f)] private float brightness = 3.5f;
-        [SerializeField] private Color echoColor = new Color(0.72f, 0.86f, 0.92f, 1f);
+        [SerializeField] private Color echoColor = Color.white;
         [Tooltip("How strongly an active echo ring parts volumetric fog at revealed surfaces.")]
         [SerializeField, Range(0f, 1f)] private float fogRevealStrength = 0.9f;
 
@@ -67,6 +68,11 @@ namespace AnEchoHasNoShape.Echolocation
         [Header("Optional Audio")]
         [SerializeField] private AudioSource audioSource;
         [SerializeField] private AudioClip echoClip;
+        [SerializeField, Range(0f, 1f)] private float echoVolume = .78f;
+        [Tooltip("Maximum random pitch variation applied to each echo, measured in semitones. Keep this subtle for a frequently repeated sound.")]
+        [SerializeField, Range(0f, 2f)] private float pitchVariationSemitones = 0.5f;
+        [Tooltip("Maximum random volume variation applied to each echo.")]
+        [SerializeField, Range(0f, 0.2f)] private float volumeVariation = 0.035f;
 
         private bool pulseIsActive;
         private float pulseRadius;
@@ -102,6 +108,24 @@ namespace AnEchoHasNoShape.Echolocation
             if (audioSource == null)
             {
                 audioSource = GetComponent<AudioSource>();
+            }
+
+            if (audioSource == null)
+            {
+                audioSource = gameObject.AddComponent<AudioSource>();
+                audioSource.playOnAwake = false;
+                audioSource.spatialBlend = 0f;
+                audioSource.dopplerLevel = 0f;
+            }
+
+            if (echoClip == null)
+            {
+                GameAudioLibrary library = GameAudioLibrary.Load();
+                if (library != null)
+                {
+                    echoClip = library.EchoClip;
+                    echoVolume = library.EchoVolume;
+                }
             }
         }
 
@@ -174,7 +198,17 @@ namespace AnEchoHasNoShape.Echolocation
 
             if (audioSource != null && echoClip != null)
             {
-                audioSource.PlayOneShot(echoClip);
+                // The authored clip is longer than the echo cooldown. Restart it
+                // instead of stacking several long tails into an increasingly
+                // loud wash when the player echoes as soon as the cooldown ends.
+                audioSource.Stop();
+
+                float semitoneOffset = Random.Range(-pitchVariationSemitones, pitchVariationSemitones);
+                audioSource.pitch = Mathf.Pow(2f, semitoneOffset / 12f);
+
+                float variedVolume = Mathf.Clamp01(
+                    echoVolume + Random.Range(-volumeVariation, volumeVariation));
+                audioSource.PlayOneShot(echoClip, variedVolume);
             }
         }
 

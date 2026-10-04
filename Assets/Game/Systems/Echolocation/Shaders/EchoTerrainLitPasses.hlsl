@@ -5,6 +5,7 @@
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/GBufferOutput.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DBuffer.hlsl"
+#include "CityEcho.hlsl"
 
 float3 _EchoPulseOrigin;
 float _EchoPulseRadius;
@@ -193,7 +194,10 @@ half3 CalculateTerrainEchoReveal(float3 positionWS, half3 normalWS)
         * _WorldReverbActive
         * _WorldReverbIntensity;
 
-    return reveal + worldReveal;
+    half3 cityColor, cityMoving;
+    float cityAmount;
+    CityEchoAt(positionWS, cityColor, cityAmount, cityMoving);
+    return reveal + worldReveal + cityMoving;
 }
 
 struct Attributes

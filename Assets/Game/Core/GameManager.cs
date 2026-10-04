@@ -15,7 +15,8 @@ namespace AnEchoHasNoShape
             CenterMonument,
             GlacierStart,
             GlacierMid,
-            GlacierEnd
+            GlacierEnd,
+            CityMainEntrance
         }
 
         public enum PlayerCheckpoint
@@ -23,7 +24,8 @@ namespace AnEchoHasNoShape
             Monument,
             GlacierStart,
             GlacierMid,
-            GlacierEnd
+            GlacierEnd,
+            CityMainEntrance
         }
 
         public static GameManager Instance { get; private set; }
@@ -58,7 +60,7 @@ namespace AnEchoHasNoShape
         [SerializeField, Min(0.01f)] private float checkpointFadeFromBlackDuration = 0.7f;
 
         [Header("Development Start State")]
-        [Tooltip("Development builds and the Editor only. Enables start-state overrides and the slash-command console.")]
+        [Tooltip("Enables start-state overrides and the slash-command console in the Editor and standalone builds. Disable this for public releases that should not expose debug commands.")]
         [SerializeField] private bool enableDevelopmentTools;
 
         [SerializeField] private DevelopmentSpawnPoint initialSpawnPoint = DevelopmentSpawnPoint.CenterMonument;
@@ -77,6 +79,8 @@ namespace AnEchoHasNoShape
 
         [Tooltip("Optional glacier-end spawn. If empty, an object named GlacierRespawnEnd is used.")]
         [SerializeField] private Transform glacierEndSpawn;
+        [Tooltip("Optional city entrance spawn. If empty, CityMainEntrance is used.")]
+        [SerializeField] private Transform cityMainEntranceSpawn;
 
         private const string VolumetricFogResourcePath = "Rendering/AERO Basic Fog";
         private const float VolumetricDensityScale = 1f;
@@ -103,7 +107,7 @@ namespace AnEchoHasNoShape
         public float FogStrength => fogStrength;
         public Color GlacierFogColor => glacierFogColor;
         public bool EchoUnlocked => echoUnlocked;
-        public bool DevelopmentToolsEnabled => enableDevelopmentTools && (Application.isEditor || Debug.isDebugBuild);
+        public bool DevelopmentToolsEnabled => enableDevelopmentTools;
         public int CompletedWorldReverberations => completedWorldReverberations;
         public PlayerCheckpoint CurrentCheckpoint => currentCheckpoint;
 
@@ -157,6 +161,10 @@ namespace AnEchoHasNoShape
             Transform destination;
             switch (initialSpawnPoint)
             {
+                case DevelopmentSpawnPoint.CityMainEntrance:
+                    SetCheckpoint(PlayerCheckpoint.CityMainEntrance);
+                    destination = GetCurrentCheckpointTransform();
+                    break;
                 case DevelopmentSpawnPoint.GlacierStart:
                     SetCheckpoint(PlayerCheckpoint.GlacierStart);
                     destination = GetCurrentCheckpointTransform();
@@ -199,6 +207,11 @@ namespace AnEchoHasNoShape
 
         public Transform GetPointOfInterest(string pointName)
         {
+            if (string.Equals(pointName, "citymainentrance", System.StringComparison.OrdinalIgnoreCase))
+            {
+                return ResolveCheckpoint(PlayerCheckpoint.CityMainEntrance);
+            }
+
             if (string.Equals(pointName, "centermonument", System.StringComparison.OrdinalIgnoreCase))
             {
                 return ResolveCheckpoint(PlayerCheckpoint.Monument);
@@ -379,6 +392,7 @@ namespace AnEchoHasNoShape
         {
             return checkpoint switch
             {
+                PlayerCheckpoint.CityMainEntrance => ResolveTransform(cityMainEntranceSpawn, "CityMainEntrance"),
                 PlayerCheckpoint.GlacierStart => ResolveTransform(
                     glacierStartSpawn, "GlacierRespawnStart", "GlacierRespawn"),
                 PlayerCheckpoint.GlacierMid => ResolveTransform(

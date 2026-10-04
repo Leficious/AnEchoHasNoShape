@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d3378b48acb4d56b5a7c5c1c20d2660, type: 3}
+  m_Name: RuntimeAudioLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.Core.GameAudioLibrary
+  echoClip: {fileID: 8300000, guid: db5d7b509cb9c4e4bb32b91104b70cf7, type: 3}
+  echoVolume: 0.676
+  ambienceClip: {fileID: 8300000, guid: a4200e78d04b06d46ac47f34bda09b59, type: 3}
+  ambienceVolume: 0.524
+  wavesClip: {fileID: 8300000, guid: 3467508a5cfef494392f908d06a9f980, type: 3}
+  wavesVolume: 0.221
+  wavesFullVolumeDistance: 2
+  wavesFadeOutDistance: 12
+  wavesGlacierBlendStart: 0.3
+  wavesFadeSeconds: 1.5

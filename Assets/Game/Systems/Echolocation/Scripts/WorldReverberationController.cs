@@ -41,6 +41,8 @@ namespace AnEchoHasNoShape.Echolocation
         private bool isActive;
 
         public bool IsActive => isActive;
+        public Color ReverberationColor => reverberationColor;
+        public float PulseSpeed => speed;
 
         private void Awake()
         {

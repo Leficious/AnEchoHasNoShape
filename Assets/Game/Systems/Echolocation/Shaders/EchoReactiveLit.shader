@@ -6,6 +6,15 @@ Shader "An Echo Has No Shape/Echo Reveal Overlay"
         _RevealMode("Reveal Mode", Range(0, 1)) = 0
         _RevealMultiplier("Reveal Multiplier", Range(0, 4)) = 1
         _DiffusionStrength("Surface Diffusion", Range(0, 2)) = 1
+        [HideInInspector] _SoftArchitecture("Soft Architecture", Float) = 0
+        [HideInInspector] _CityRevealAmount("City Reveal Amount", Float) = 0
+        [HideInInspector] _CityPerspective("City Perspective", Float) = 0
+        [HideInInspector] _CityRevealColor("City Reveal Color", Color) = (1, 1, 1, 1)
+        [HideInInspector] _LockCityCharacterColor("Lock Character Color", Float) = 0
+        [HideInInspector] _ArchitectureGroundFade("Architecture Ground Fade", Vector) = (0, 1, 0, 0)
+        [HideInInspector] _ArchitectureTint("Architecture Tint", Color) = (0.62, 0.76, 0.82, 1)
+        [HideInInspector] _ArchitectureBrightness("Architecture Brightness", Float) = 0.25
+        [HideInInspector] _ArchitectureShading("Architecture Shading", Float) = 0.45
         [HDR] _ObjectEchoColor("Object Echo Color", Color) = (1, 1, 1, 1)
         [HideInInspector] _UseObjectEchoColor("Use Object Echo Color", Float) = 0
         [HideInInspector] _UseRevealDurationOverride("Use Reveal Duration Override", Float) = 0
@@ -19,6 +28,9 @@ Shader "An Echo Has No Shape/Echo Reveal Overlay"
         [HideInInspector] _EchoUseAlphaClip("Use Source Alpha Clip", Float) = 0
         [HideInInspector] _EchoAlphaCutoff("Source Alpha Cutoff", Range(0, 1)) = 0.5
         [HideInInspector] _ObjectWireframeMultiplier("Object Wireframe Multiplier", Range(0, 1)) = 1
+        [HideInInspector] _EchoOpacity("Echo Opacity", Range(0, 1)) = 1
+        [HideInInspector] _SrcBlend("Source Blend", Float) = 1
+        [HideInInspector] _DstBlend("Destination Blend", Float) = 1
         [Enum(UnityEngine.Rendering.CullMode)] _Cull("Cull", Float) = 2
     }
 
@@ -31,28 +43,22 @@ Shader "An Echo Has No Shape/Echo Reveal Overlay"
             "Queue" = "Transparent+10"
         }
 
-        Pass
-        {
-            Name "EchoReveal"
-            // Drawn explicitly by EchoPostFogRendererFeature after AERO and
-            // Phase Veil. Keeping this out of UniversalForward prevents the
-            // volumetric fog pass from washing the additive echo away.
-            Tags { "LightMode" = "EchoRevealPostFog" }
-
-            Blend One One
-            ZWrite Off
-            ZTest LEqual
-            Cull [_Cull]
-            ColorMask RGB
-
-            HLSLPROGRAM
-            #pragma vertex Vert
-            #pragma fragment Frag
+        HLSLINCLUDE
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "CityEcho.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
                 float _Extrusion;
+                float _SoftArchitecture;
+                float _CityRevealAmount;
+                float _CityPerspective;
+                half4 _CityRevealColor;
+                float _LockCityCharacterColor;
+                float4 _ArchitectureGroundFade;
+                half4 _ArchitectureTint;
+                float _ArchitectureBrightness;
+                float _ArchitectureShading;
                 float _RevealMode;
                 float _RevealMultiplier;
                 float _DiffusionStrength;
@@ -68,6 +74,7 @@ Shader "An Echo Has No Shape/Echo Reveal Overlay"
                 float _EchoUseAlphaClip;
                 float _EchoAlphaCutoff;
                 float _ObjectWireframeMultiplier;
+                float _EchoOpacity;
                 float _Cull;
             CBUFFER_END
 
@@ -173,6 +180,7 @@ Shader "An Echo Has No Shape/Echo Reveal Overlay"
 
             half3 GetActiveEchoColor()
             {
+                if (_SoftArchitecture > 0.5) return half3(1, 1, 1);
                 return lerp(_EchoPulseColor.rgb, _ObjectEchoColor.rgb, saturate(_UseObjectEchoColor));
             }
 
@@ -354,6 +362,7 @@ Shader "An Echo Has No Shape/Echo Reveal Overlay"
                 float movingAmount = saturate(core + halo * 0.42 + trail * 0.28);
                 float accumulatedAmount = behindMask * 0.22;
                 float amount = lerp(movingAmount, accumulatedAmount, step(0.5, _RevealMode));
+                if (_SoftArchitecture > 0.5) amount = max(movingAmount, behindMask * 0.72);
 
                 return _WorldReverbColor.rgb
                     * amount
@@ -398,11 +407,19 @@ Shader "An Echo Has No Shape/Echo Reveal Overlay"
                 half3 sirenColor = lerp(sirenMovingReveal, sirenOutlineColor, outlineMode) * _SirenEchoPulseIntensity;
                 float sirenOwnership = CalculateSirenOwnership(sirenDistance);
                 playerColor *= 1.0 - sirenOwnership;
-                half3 reveal = (playerColor + sirenColor) * _RevealMultiplier;
+                half3 localReveal = (playerColor + sirenColor) * _RevealMultiplier;
+                if (_SoftArchitecture > 0.5 && outlineMode < 0.5)
+                {
+                    // Hold a front-facing wall fill after the moving wave has
+                    // passed, using exactly the same reveal lifetime as edges.
+                    half3 heldFill = (outlineColor * _EchoPulseIntensity * (1.0 - sirenOwnership)
+                        + sirenOutlineColor * _SirenEchoPulseIntensity) * _RevealMultiplier;
+                    localReveal = max(localReveal, heldFill);
+                }
 
                 float wireframe = CalculateEchoWireframe(input.positionWS, normalWS);
-                reveal *= 1.0h + wireframe * _EchoWireframeStrength * _ObjectWireframeMultiplier;
-                reveal += CalculateWorldReverberation(input.positionWS) * _RevealMultiplier;
+                localReveal *= 1.0h + wireframe * _EchoWireframeStrength * _ObjectWireframeMultiplier;
+                half3 worldReveal = CalculateWorldReverberation(input.positionWS) * _RevealMultiplier;
 
                 float shimmerPhase = _Time.y * _TimedRevealShimmerSpeed
                     + dot(input.positionWS, float3(0.47, 0.73, 0.31));
@@ -411,10 +428,93 @@ Shader "An Echo Has No Shape/Echo Reveal Overlay"
                 float timedOutlineMask = step(0.5, _RevealMode)
                     * step(0.5, _UseRevealDurationOverride)
                     * saturate(_TimedRevealAmount);
-                reveal *= lerp(1.0, shimmerMultiplier, timedOutlineMask);
+                localReveal *= lerp(1.0, shimmerMultiplier, timedOutlineMask);
+                half3 reveal = localReveal + worldReveal;
+                half3 cityColor, cityMoving;
+                float cityAmount;
+                CityEchoAt(input.positionWS, cityColor, cityAmount, cityMoving);
+                if (_SoftArchitecture < 0.5) reveal += cityMoving * _PlayerEchoMask;
+                if (_SoftArchitecture > 0.5)
+                {
+                    // The sustained character reveal owns city color, while
+                    // the global pulse still sweeps over it in normal gold.
+                    reveal = lerp(localReveal, cityColor * 2.5, cityAmount) + worldReveal + cityMoving;
+                    // Compress HDR echo energy before tinting large walls. Keep
+                    // the reveal envelope so pulse arrival and fades still read.
+                    float energy = max(reveal.r, max(reveal.g, reveal.b));
+                    half3 hue = reveal / max(energy, 0.0001);
+                    float facing = saturate(dot(normalWS, normalize(float3(0.4, 0.8, 0.3))) * 0.5 + 0.5);
+                    float shade = lerp(1.0, 0.35 + 0.65 * facing, _ArchitectureShading);
+                    float heightFade = lerp(1.0, smoothstep(0.0, _ArchitectureGroundFade.y,
+                        input.positionWS.y - _ArchitectureGroundFade.x), _ArchitectureGroundFade.z);
+                    reveal = hue * _ArchitectureTint.rgb * _ArchitectureBrightness * shade * saturate(energy) * heightFade;
+                }
 
-                return half4(reveal, max(reveal.r, max(reveal.g, reveal.b)));
+                // Vegetation uses alpha blending so local/player/siren echoes can
+                // remain soft. A major world reverberation bypasses that local
+                // opacity reduction and therefore reads at the same full opacity
+                // as the rest of the environment.
+                float localAlpha = max(localReveal.r, max(localReveal.g, localReveal.b)) * _EchoOpacity;
+                float worldAlpha = max(worldReveal.r, max(worldReveal.g, worldReveal.b));
+                float perspectiveMask = CityPerspectiveAt(input.positionWS, _CityPerspective);
+                if (_LockCityCharacterColor > 0.5)
+                {
+                    // Preserve visibility, shading and ground fade while all
+                    // echo sources share the character's own identifying hue.
+                    half brightness = max(reveal.r, max(reveal.g, reveal.b));
+                    half3 lockedColor = _LockCityCharacterColor > 1.5
+                        ? _CityRevealColor.rgb
+                        : CityCharacterColorAt(input.positionWS, _CityRevealColor.rgb);
+                    reveal = brightness * lockedColor;
+                }
+                return half4(reveal * perspectiveMask, perspectiveMask * saturate(max(max(localAlpha, worldAlpha),
+                    max(cityAmount * _SoftArchitecture, max(cityMoving.r, max(cityMoving.g, cityMoving.b)) * _PlayerEchoMask))));
             }
+            half4 FragArchitectureDepth(Varyings input) : SV_Target
+            {
+                // Only the city fill participates. Unrevealed buildings must
+                // never become invisible occluders, and outline hulls must not
+                // enlarge the depth silhouette.
+                clip(_SoftArchitecture - 0.5);
+                clip(0.5 - _RevealMode);
+                clip(CityPerspectiveAt(input.positionWS, _CityPerspective) - 0.001);
+                half4 echo = Frag(input);
+                float playerDistance = distance(input.positionWS, _EchoPulseOrigin);
+                float sirenDistance = distance(input.positionWS, _SirenEchoPulseOrigin);
+                float heldReveal = max(
+                    CalculateAccumulatedReveal(playerDistance) * (1.0 - CalculateSirenOwnership(sirenDistance)),
+                    CalculateSirenAccumulatedReveal(sirenDistance));
+                clip(max(echo.a, heldReveal) - 0.001);
+                return 0;
+            }
+        ENDHLSL
+
+        Pass
+        {
+            Name "ArchitectureDepth"
+            Tags { "LightMode" = "EchoArchitectureDepth" }
+            ColorMask 0
+            ZWrite On
+            ZTest LEqual
+            Cull Back
+            HLSLPROGRAM
+            #pragma vertex Vert
+            #pragma fragment FragArchitectureDepth
+            ENDHLSL
+        }
+
+        Pass
+        {
+            Name "EchoReveal"
+            Tags { "LightMode" = "EchoRevealPostFog" }
+            Blend [_SrcBlend] [_DstBlend]
+            ZWrite Off
+            ZTest LEqual
+            Cull [_Cull]
+            ColorMask RGB
+            HLSLPROGRAM
+            #pragma vertex Vert
+            #pragma fragment Frag
             ENDHLSL
         }
     }

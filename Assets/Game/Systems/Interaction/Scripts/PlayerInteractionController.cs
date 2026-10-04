@@ -94,6 +94,12 @@ namespace AnEchoHasNoShape.Interaction
             }
 
             MonoBehaviour[] behaviours = hit.collider.GetComponentsInParent<MonoBehaviour>(true);
+            var perspective = hit.collider.GetComponentInParent<AnEchoHasNoShape.Echolocation.CityPerspectiveGroup>();
+            if (perspective != null && !perspective.IsVisibleAt(hit.point))
+            {
+                ClearHover();
+                return;
+            }
 
             foreach (MonoBehaviour behaviour in behaviours)
             {

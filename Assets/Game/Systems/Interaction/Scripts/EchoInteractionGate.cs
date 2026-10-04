@@ -16,8 +16,14 @@ namespace AnEchoHasNoShape.Interaction
         [SerializeField] private UnityEvent onBlockedInteraction;
 
         private EchoRevealState revealState;
+        private CitySequenceController citySequence;
 
-        public bool IsInteractionAvailable => RevealState != null && RevealState.IsRevealed;
+        private bool HasCityReveal => citySequence != null &&
+            citySequence.PerspectiveVisibility(0, transform.position) > 0.1f;
+
+        public bool IsInteractionAvailable => HasCityReveal || (RevealState != null && RevealState.IsRevealed);
+
+        public void SetCityRevealSource(CitySequenceController sequence) => citySequence = sequence;
 
         private EchoRevealState RevealState
         {
@@ -45,7 +51,7 @@ namespace AnEchoHasNoShape.Interaction
 
         public void NotifyInteractionPerformed()
         {
-            if (consumeRevealOnInteraction)
+            if (consumeRevealOnInteraction && !HasCityReveal)
             {
                 RevealState?.ConsumeReveal();
             }

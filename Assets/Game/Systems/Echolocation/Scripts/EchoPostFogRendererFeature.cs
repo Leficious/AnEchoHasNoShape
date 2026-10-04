@@ -15,12 +15,14 @@ namespace AnEchoHasNoShape.Echolocation
         private sealed class EchoPostFogPass : ScriptableRenderPass
         {
             private static readonly ShaderTagId EchoShaderTag = new ShaderTagId("EchoRevealPostFog");
+            private static readonly ShaderTagId ArchitectureDepthTag = new ShaderTagId("EchoArchitectureDepth");
             private static readonly ProfilingSampler ProfilingSampler = new ProfilingSampler("Echo Post Fog");
             private readonly FilteringSettings filteringSettings = new FilteringSettings(RenderQueueRange.all);
 
             private sealed class PassData
             {
                 public RendererListHandle rendererList;
+                public RendererListHandle depthList;
             }
 
             public EchoPostFogPass()
@@ -48,17 +50,26 @@ namespace AnEchoHasNoShape.Echolocation
                     drawingSettings,
                     filteringSettings);
 
+                DrawingSettings depthSettings = RenderingUtils.CreateDrawingSettings(
+                    new List<ShaderTagId> { ArchitectureDepthTag },
+                    renderingData, cameraData, lightData, SortingCriteria.CommonOpaque);
+                RendererListParams depthListParams = new RendererListParams(
+                    renderingData.cullResults, depthSettings, filteringSettings);
+
                 using (var builder = renderGraph.AddRasterRenderPass<PassData>(
                     "Echo Post Fog",
                     out PassData passData,
                     ProfilingSampler))
                 {
                     passData.rendererList = renderGraph.CreateRendererList(rendererListParams);
+                    passData.depthList = renderGraph.CreateRendererList(depthListParams);
+                    builder.UseRendererList(passData.depthList);
                     builder.UseRendererList(passData.rendererList);
                     builder.SetRenderAttachment(resourceData.activeColorTexture, 0, AccessFlags.Write);
-                    builder.SetRenderAttachmentDepth(resourceData.activeDepthTexture, AccessFlags.Read);
+                    builder.SetRenderAttachmentDepth(resourceData.activeDepthTexture, AccessFlags.ReadWrite);
                     builder.SetRenderFunc(static (PassData data, RasterGraphContext context) =>
                     {
+                        context.cmd.DrawRendererList(data.depthList);
                         context.cmd.DrawRendererList(data.rendererList);
                     });
                 }

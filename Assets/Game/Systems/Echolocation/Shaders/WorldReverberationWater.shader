@@ -33,6 +33,7 @@ Shader "An Echo Has No Shape/World Reverberation Water"
             #pragma fragment Frag
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "CityEcho.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
                 float _SurfaceOffset;
@@ -392,6 +393,10 @@ Shader "An Echo Has No Shape/World Reverberation Water"
                 float entryRipple = CalculateWaterEntryRipple(input.positionWS);
                 color += half3(0.36h, 0.9h, 1.0h) * entryRipple * 1.35h;
                 color += CalculateUnderwaterSurface(input);
+                half3 cityColor, cityMoving;
+                float cityAmount;
+                CityEchoAt(input.positionWS, cityColor, cityAmount, cityMoving);
+                color += cityMoving * _RevealStrength;
                 return half4(color, max(color.r, max(color.g, color.b)));
             }
             ENDHLSL

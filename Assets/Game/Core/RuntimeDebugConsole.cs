@@ -22,10 +22,14 @@ namespace AnEchoHasNoShape
             "/help",
             "/god",
             "/player",
+            "/fog",
+            "/fog on",
+            "/fog off",
             "/tp centermonument",
             "/tp glacierstart",
             "/tp glaciermid",
             "/tp glacierend",
+            "/tp citymainentrance",
             "/echo unlock",
             "/tutorial complete",
             "/reverb"
@@ -36,10 +40,14 @@ namespace AnEchoHasNoShape
             "List available commands",
             "Enable free-flight mode",
             "Restore normal player controls",
+            "Toggle fog in god mode",
+            "Enable fog in god mode",
+            "Disable fog in god mode",
             "Teleport to the central monument",
             "Teleport to the glacier entrance",
             "Teleport to the glacier midpoint",
             "Teleport to the glacier endpoint",
+            "Teleport to the Unremembered City main entrance",
             "Unlock the echo ability",
             "Apply completed tutorial progression",
             "Trigger a world reverberation"
@@ -55,7 +63,10 @@ namespace AnEchoHasNoShape
         private Rigidbody playerBody;
         private Collider playerCollider;
         private bool consoleOpen;
+        private int consoleClosedFrame = -1;
         private bool godMode;
+        private bool fogStateCaptured;
+        private bool previousFogEnabled;
         private bool previousCameraCanMove;
         private bool previousPlayerCanMove;
         private bool previousKinematic;
@@ -91,7 +102,7 @@ namespace AnEchoHasNoShape
 
         private void Update()
         {
-            if (Input.GetKeyDown(KeyCode.Slash) && !consoleOpen)
+            if (!consoleOpen && Time.frameCount > consoleClosedFrame && ConsoleTogglePressed())
             {
                 OpenConsole();
                 return;
@@ -122,6 +133,19 @@ namespace AnEchoHasNoShape
             if (godMode) UpdateGodMovement();
         }
 
+        private static bool ConsoleTogglePressed()
+        {
+            if (Input.GetKeyDown(KeyCode.Slash) || Input.GetKeyDown(KeyCode.KeypadDivide))
+            {
+                return true;
+            }
+
+            // KeyCode.Slash can be unreliable in standalone players on some
+            // keyboard layouts. inputString reflects the character Unity actually
+            // received and makes reopening the console reliable in builds.
+            return !string.IsNullOrEmpty(Input.inputString) && Input.inputString.IndexOf('/') >= 0;
+        }
+
         private void OpenConsole()
         {
             FindPlayer();
@@ -142,8 +166,10 @@ namespace AnEchoHasNoShape
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
             canvas.gameObject.SetActive(true);
-            input.text = "/";
-            UpdateSuggestions(input.text);
+            input.enabled = true;
+            input.interactable = true;
+            input.SetTextWithoutNotify("/");
+            UpdateSuggestions("/");
             FocusInput();
             if (focusRoutine != null)
             {
@@ -155,6 +181,7 @@ namespace AnEchoHasNoShape
         private void CloseConsole()
         {
             consoleOpen = false;
+            consoleClosedFrame = Time.frameCount;
             if (focusRoutine != null)
             {
                 StopCoroutine(focusRoutine);
@@ -163,6 +190,10 @@ namespace AnEchoHasNoShape
             if (input != null)
             {
                 input.DeactivateInputField();
+            }
+            if (EventSystem.current != null)
+            {
+                EventSystem.current.SetSelectedGameObject(null);
             }
             if (suggestionsPanel != null)
             {
@@ -273,10 +304,13 @@ namespace AnEchoHasNoShape
             switch (parts[0].ToLowerInvariant())
             {
                 case "help":
-                    result = "/tp centermonument | /tp glacierstart | /tp glaciermid | /tp glacierend | /god | /player | /echo unlock | /tutorial complete | /reverb";
+                    result = "/tp centermonument | /tp glacierstart | /tp glaciermid | /tp glacierend | /tp citymainentrance | /god | /player | /fog [on|off] | /echo unlock | /tutorial complete | /reverb";
+                    break;
+                case "fog":
+                    result = SetDebugFog(parts);
                     break;
                 case "tp":
-                    result = parts.Length > 1 ? Teleport(parts[1]) : "Usage: /tp <centermonument|glacierstart|glaciermid|glacierend>";
+                    result = parts.Length > 1 ? Teleport(parts[1]) : "Usage: /tp <centermonument|glacierstart|glaciermid|glacierend|citymainentrance>";
                     break;
                 case "god":
                     SetGodMode(true);
@@ -344,6 +378,35 @@ namespace AnEchoHasNoShape
             return $"Teleported to {pointName}.";
         }
 
+        private string SetDebugFog(string[] parts)
+        {
+            if (!godMode) return "Enter /god first to change debug fog.";
+            GameManager manager = GameManager.Instance;
+            if (manager == null) return "Game manager not found.";
+            bool enabledState = !manager.FogEnabled;
+            if (parts.Length > 1)
+            {
+                if (parts.Length != 2) return "Usage: /fog [on|off]";
+                if (parts[1].Equals("on", System.StringComparison.OrdinalIgnoreCase)) enabledState = true;
+                else if (parts[1].Equals("off", System.StringComparison.OrdinalIgnoreCase)) enabledState = false;
+                else return "Usage: /fog [on|off]";
+            }
+            if (!fogStateCaptured)
+            {
+                previousFogEnabled = manager.FogEnabled;
+                fogStateCaptured = true;
+            }
+            manager.SetFogEnabled(enabledState);
+            return enabledState ? "Fog enabled." : "Fog disabled.";
+        }
+
+        private void RestoreDebugFog()
+        {
+            if (!fogStateCaptured) return;
+            GameManager.Instance?.SetFogEnabled(previousFogEnabled);
+            fogStateCaptured = false;
+        }
+
         private void TeleportToPose(Vector3 position, Quaternion rotation)
         {
             GameObject poseObject = new GameObject("Debug Teleport Pose") { hideFlags = HideFlags.HideAndDontSave };
@@ -354,6 +417,7 @@ namespace AnEchoHasNoShape
 
         private void SetGodMode(bool enabledState)
         {
+            if (!enabledState) RestoreDebugFog();
             FindPlayer();
             if (player == null || godMode == enabledState) return;
             godMode = enabledState;
@@ -512,6 +576,7 @@ namespace AnEchoHasNoShape
 
         private void OnDestroy()
         {
+            RestoreDebugFog();
             if (activeInstance == this)
             {
                 activeInstance = null;

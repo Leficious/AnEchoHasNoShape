@@ -41,15 +41,15 @@ namespace AnEchoHasNoShape.Echolocation
         [SerializeField, Min(0.01f)] private float trailLength = 2.8f;
         [SerializeField, Min(0.1f)] private float fadeOutDistance = 12f;
         [SerializeField, Range(0f, 1f)] private float fogRevealStrength = 0.9f;
-        [SerializeField, Range(0f, 1f)] private float wireframeStrength = 0.32f;
-        [SerializeField, Range(0.1f, 3f)] private float wireframeScale = 0.7f;
-        [SerializeField, Range(0.25f, 3f)] private float wireframeThickness = 0.9f;
-
         [Header("Optional Audio")]
         [SerializeField] private AudioClip sirenClip;
         [SerializeField, Range(0f, 1f)] private float sirenVolume = 1f;
         [Tooltip("Extra loudness applied to the siren clip. Values above 1 may clip if the source recording is already loud.")]
         [SerializeField, Range(0f, 3f)] private float sirenGain = 1.65f;
+        [Tooltip("Maximum random pitch variation for each siren song, measured in semitones.")]
+        [SerializeField, Range(0f, 2f)] private float pitchVariationSemitones = 0.5f;
+        [Tooltip("Maximum random variation around the siren song gain.")]
+        [SerializeField, Range(0f, 0.2f)] private float volumeVariation = 0.035f;
         [Tooltip("Distance from the active siren source at which it remains at full volume.")]
         [SerializeField, Min(0.1f)] private float sirenMinDistance = 28f;
         [Tooltip("Distance beyond which the active siren source can no longer be heard.")]
@@ -188,9 +188,12 @@ namespace AnEchoHasNoShape.Echolocation
             audioSource.maxDistance = Mathf.Max(sirenMinDistance + 0.1f, sirenMaxDistance);
             audioSource.dopplerLevel = 0f;
             audioSource.playOnAwake = false;
-            audioSource.PlayOneShot(sirenClip, sirenGain);
+            float semitoneOffset = Random.Range(-pitchVariationSemitones, pitchVariationSemitones);
+            audioSource.pitch = Mathf.Pow(2f, semitoneOffset / 12f);
+            float variedGain = Mathf.Max(0f, sirenGain + Random.Range(-volumeVariation, volumeVariation));
+            audioSource.PlayOneShot(sirenClip, variedGain);
 
-            Destroy(audioObject, sirenClip.length + 0.5f);
+            Destroy(audioObject, sirenClip.length / audioSource.pitch + 0.5f);
         }
 
         private void RandomizeSirenIcebergSelection()

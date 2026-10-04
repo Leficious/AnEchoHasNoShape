@@ -72,6 +72,12 @@ namespace AnEchoHasNoShape.Echolocation
             }
         }
 
+        public void ConfigureWindow(float holdSeconds, float fadeSeconds)
+        {
+            revealedDuration = Mathf.Max(0f, holdSeconds);
+            fadeOutDuration = Mathf.Max(0f, fadeSeconds);
+        }
+
         public void Reveal()
         {
             if (remainRevealedAfterFirstEcho)
