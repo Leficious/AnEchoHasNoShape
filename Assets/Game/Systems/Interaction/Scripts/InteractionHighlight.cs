@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using AnEchoHasNoShape.Echolocation;
 
 namespace AnEchoHasNoShape.Interaction
 {
@@ -21,6 +22,8 @@ namespace AnEchoHasNoShape.Interaction
         private float visibility;
         private float targetVisibility;
         private float fadeDuration = 0.18f;
+        private CityCharacterInteractable echoCharacter;
+        private float integratedStrength;
 
         public void Show(
             Shader shader,
@@ -29,6 +32,17 @@ namespace AnEchoHasNoShape.Interaction
             float shimmerSpeed,
             float duration)
         {
+            echoCharacter = GetComponent<CityCharacterInteractable>();
+            if (echoCharacter != null && echoCharacter.HasIntegratedHighlight)
+            {
+                // Echo characters render after fog; a separate transparent proxy
+                // would be composited at a different stage and wash out their color.
+                integratedStrength = Mathf.Clamp01(strength);
+                fadeDuration = Mathf.Max(0.01f, duration);
+                isVisible = true;
+                targetVisibility = 1f;
+                return;
+            }
             if (shader == null)
             {
                 return;
@@ -67,6 +81,8 @@ namespace AnEchoHasNoShape.Interaction
                 }
             }
 
+            if (echoCharacter != null && echoCharacter.HasIntegratedHighlight)
+                echoCharacter.SetInteractionHighlight(visibility * integratedStrength);
             RefreshProxyVisibility();
         }
 
@@ -218,7 +234,8 @@ namespace AnEchoHasNoShape.Interaction
                 if (proxy.Highlight != null)
                 {
                     bool fadeIsVisible = isVisible || visibility > 0.001f;
-                    proxy.Highlight.enabled = fadeIsVisible && proxy.Source != null && proxy.Source.enabled;
+                    proxy.Highlight.enabled = !(echoCharacter != null && echoCharacter.HasIntegratedHighlight)
+                        && fadeIsVisible && proxy.Source != null && proxy.Source.enabled;
                 }
             }
         }
@@ -226,10 +243,12 @@ namespace AnEchoHasNoShape.Interaction
         private void OnDisable()
         {
             Hide();
+            if (echoCharacter != null) echoCharacter.SetInteractionHighlight(0f);
         }
 
         private void OnDestroy()
         {
+            if (echoCharacter != null) echoCharacter.SetInteractionHighlight(0f);
             if (highlightMaterial != null)
             {
                 Destroy(highlightMaterial);

@@ -22,6 +22,7 @@ namespace AnEchoHasNoShape.Echolocation
         [SerializeField] private UnityEvent onHidden;
 
         private MeshRenderer[] meshRenderers;
+        private SkinnedMeshRenderer[] skinnedRenderers;
         private Terrain[] terrains;
         private Collider[] colliders;
         private int lastTriggeredPulseSequence = -1;
@@ -144,6 +145,7 @@ namespace AnEchoHasNoShape.Echolocation
         private void CacheBoundsSources()
         {
             meshRenderers = GetComponentsInChildren<MeshRenderer>(true);
+            skinnedRenderers = GetComponentsInChildren<SkinnedMeshRenderer>(true);
             terrains = GetComponentsInChildren<Terrain>(true);
             colliders = GetComponentsInChildren<Collider>(true);
         }
@@ -167,6 +169,9 @@ namespace AnEchoHasNoShape.Echolocation
 
                 Encapsulate(ref combinedBounds, ref hasBounds, renderer.bounds);
             }
+
+            foreach (SkinnedMeshRenderer renderer in skinnedRenderers)
+                if (renderer != null) Encapsulate(ref combinedBounds, ref hasBounds, renderer.bounds);
 
             foreach (Terrain terrain in terrains)
             {

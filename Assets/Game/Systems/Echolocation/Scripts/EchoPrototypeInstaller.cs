@@ -10,6 +10,9 @@ namespace AnEchoHasNoShape.Echolocation
             // Supply the city treatment before constructing overlay materials.
             // Keep authored profiles intact, including an intentional opt-out.
             GameObject city = GameObject.Find("UnrememberedCity");
+            // Also covers Enter Play Mode with scene reload disabled.
+            if (city != null && city.TryGetComponent(out CityVisibility visibility) && visibility.enabled)
+                visibility.ApplyRuntimeVisibility();
             if (city != null && city.GetComponent<EchoSurfaceProfile>() == null)
                 city.AddComponent<EchoSurfaceProfile>().ConfigureSoftArchitecture();
             CitySequenceController.Install(city);

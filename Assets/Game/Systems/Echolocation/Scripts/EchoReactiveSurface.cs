@@ -202,6 +202,13 @@ namespace AnEchoHasNoShape.Echolocation
             ApplyFloat(outlineMaterials, id, perspective);
         }
 
+        // A character can render its body and accessories with one shared echo material.
+        public void SetOverlayRendering(bool visible)
+        {
+            if (ringOverlayObject != null) ringOverlayObject.SetActive(visible);
+            if (outlineOverlayObject != null) outlineOverlayObject.SetActive(visible);
+        }
+
         public void SetCityCharacterColor(Color color, bool allowCompletionGold = true)
         {
             float colorLock = allowCompletionGold ? 1f : 2f;

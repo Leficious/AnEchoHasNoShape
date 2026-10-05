@@ -96,6 +96,14 @@ namespace AnEchoHasNoShape.Echolocation
             }
         }
 
+        public void StopReverberation()
+        {
+            isActive = false;
+            radius = 0f;
+            PublishInactive();
+            if (audioSource != null) audioSource.Stop();
+        }
+
         private void Publish()
         {
             Shader.SetGlobalVector(OriginId, transform.position);

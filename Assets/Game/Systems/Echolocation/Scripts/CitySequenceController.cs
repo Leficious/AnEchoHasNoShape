@@ -84,6 +84,7 @@ namespace AnEchoHasNoShape.Echolocation
                 if (interaction == null) interaction = actor.AddComponent<CityCharacterInteractable>();
                 interaction.Configure(this, i, names[i]);
                 Color identityColor = i == 0 ? museColor : i == 1 ? rulerColor : architectColor;
+                interaction.ConfigureSkinnedAppearance(identityColor);
                 foreach (EchoReactiveSurface surface in actor.GetComponentsInChildren<EchoReactiveSurface>(true))
                     surface.SetCityCharacterColor(identityColor);
                 if (actor.GetComponentInChildren<Collider>() == null)
@@ -104,6 +105,43 @@ namespace AnEchoHasNoShape.Echolocation
                     collider.size = bounds.size;
                 }
             }
+        }
+
+        public bool DebugSetEchoState(string state)
+        {
+            if (!isActiveAndEnabled || surfaces == null) return false;
+            int character = state == "muse" ? 0 : state == "ruler" ? 1 : state == "architect" ? 2 : -1;
+            if (character < 0 && state != "reset" && state != "gold") return false;
+
+            // Every command starts a fresh state, even after permanent completion.
+            // This also prevents repeated debug pulses overflowing the four-wave buffer.
+            waving = failing = completed = goldStarted = false;
+            stage = waveCount = 0;
+            lastCharacter = -1;
+            validChain = true;
+            elapsed = 0f;
+            ResetShaderState();
+            WorldReverberationController world = WorldReverberationController.Instance;
+            world?.StopReverberation();
+            if (state == "reset") return true;
+            if (state == "gold")
+            {
+                completed = goldStarted = true;
+                stage = 3;
+                world?.TriggerReverberation();
+                BeginWave(world != null ? world.transform.position : transform.position,
+                    world != null ? world.ReverberationColor : new Color(1f, 0.66f, 0.2f),
+                    world != null ? world.PulseSpeed : pulseSpeed);
+                return true;
+            }
+            string actorName = character == 0 ? "Muse" : character == 1 ? "Ruler" : "Architect";
+            GameObject actor = GameObject.Find(actorName);
+            stage = character + 1;
+            lastCharacter = character;
+            BeginWave(actor != null ? actor.transform.position : transform.position,
+                character == 0 ? museColor : character == 1 ? rulerColor : architectColor,
+                perspective: character + 1);
+            return true;
         }
 
         public void Visit(int character, Vector3 position)

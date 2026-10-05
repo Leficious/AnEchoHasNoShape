@@ -90,6 +90,10 @@
 /Assets/Game/Terrain/Data/*.asset
 /Assets/Game/Terrain/Data/*.asset.meta
 
+# Local terrain snapshots used by the spline-road editor tool.
+/Assets/Game/Terrain/RoadBaselines/
+/Assets/Game/Terrain/RoadBaselines.meta
+
 # Re-creatable ground-blend output. Keep the system source, not generated materials.
 /Assets/Game/Systems/GroundBlend/Generated/
 

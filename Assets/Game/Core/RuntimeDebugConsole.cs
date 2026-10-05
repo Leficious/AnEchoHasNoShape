@@ -32,7 +32,12 @@ namespace AnEchoHasNoShape
             "/tp citymainentrance",
             "/echo unlock",
             "/tutorial complete",
-            "/reverb"
+            "/reverb",
+            "/city muse",
+            "/city ruler",
+            "/city architect",
+            "/city reset",
+            "/city gold"
         };
 
         private static readonly string[] SuggestionDescriptions =
@@ -50,7 +55,12 @@ namespace AnEchoHasNoShape
             "Teleport to the Unremembered City main entrance",
             "Unlock the echo ability",
             "Apply completed tutorial progression",
-            "Trigger a world reverberation"
+            "Trigger a world reverberation",
+            "Trigger the Muse's blue city state",
+            "Trigger the Ruler's red city state",
+            "Trigger the Architect's green city state",
+            "Reset city progression and remove permanent gold",
+            "Trigger the final world echo and permanent golden city"
         };
 
         private Canvas canvas;
@@ -304,7 +314,22 @@ namespace AnEchoHasNoShape
             switch (parts[0].ToLowerInvariant())
             {
                 case "help":
-                    result = "/tp centermonument | /tp glacierstart | /tp glaciermid | /tp glacierend | /tp citymainentrance | /god | /player | /fog [on|off] | /echo unlock | /tutorial complete | /reverb";
+                    result = "/tp centermonument | /tp glacierstart | /tp glaciermid | /tp glacierend | /tp citymainentrance | /god | /player | /fog [on|off] | /echo unlock | /tutorial complete | /reverb | /city <muse|ruler|architect|reset|gold>";
+                    break;
+                case "city":
+                    if (parts.Length != 2)
+                        result = "Usage: /city <muse|ruler|architect|reset|gold>";
+                    else
+                    {
+                        CitySequenceController city = FindAnyObjectByType<CitySequenceController>();
+                        if (city == null) result = "No active city sequence found.";
+                        else if (city.DebugSetEchoState(parts[1].ToLowerInvariant()))
+                        {
+                            result = $"City state: {parts[1].ToLowerInvariant()}.";
+                            closeAfterExecution = true;
+                        }
+                        else result = "City not ready or invalid state. Use /city <muse|ruler|architect|reset|gold>.";
+                    }
                     break;
                 case "fog":
                     result = SetDebugFog(parts);
