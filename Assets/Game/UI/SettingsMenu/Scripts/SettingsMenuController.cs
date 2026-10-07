@@ -69,7 +69,8 @@ namespace AnEchoHasNoShape.UI
             // The development console owns Escape while it is open. Checking both
             // states keeps this independent of Unity's script execution order:
             // either the console is still open, or it already consumed this frame.
-            if (RuntimeDebugConsole.IsOpen || RuntimeDebugConsole.ConsumedEscapeThisFrame)
+            if (RuntimeDebugConsole.IsOpen || RuntimeDebugConsole.ConsumedEscapeThisFrame ||
+                ConfirmationPromptUI.IsOpen || ConfirmationPromptUI.ConsumedEscapeThisFrame)
             {
                 return;
             }

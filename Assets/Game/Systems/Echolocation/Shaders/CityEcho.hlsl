@@ -1,8 +1,8 @@
 #ifndef CITY_ECHO_INCLUDED
 #define CITY_ECHO_INCLUDED
-float4 _CityWaveOrigins[4]; // xyz origin, w start time
-float4 _CityWaveColors[4];
-float4 _CityWaveSettings[4]; // speed, range, width, perspective (1 blue, 2 red, 3 green, 4 gold)
+float4 _CityWaveOrigins[5]; // xyz origin, w start time
+float4 _CityWaveColors[5];
+float4 _CityWaveSettings[5]; // speed, range, width, perspective (0 white, 1 blue, 2 red, 3 green, 4 gold)
 int _CityWaveCount;
 float _CitySequenceVisibility;
 
@@ -50,7 +50,7 @@ void CityEchoAt(float3 positionWS, out half3 heldColor, out float heldAmount, ou
         // Gold uses the real world echo; character waves briefly affect surroundings.
         float ring = (1 - smoothstep(0, width, abs(behind)))
             * (1 - smoothstep(_CityWaveSettings[i].y, _CityWaveSettings[i].y + width, radius));
-        if (i < 3) movingColor += _CityWaveColors[i].rgb * ring * 2;
+        if (_CityWaveSettings[i].w < 3.5) movingColor += _CityWaveColors[i].rgb * ring * 2;
     }
     heldAmount *= _CitySequenceVisibility;
     movingColor *= _CitySequenceVisibility;

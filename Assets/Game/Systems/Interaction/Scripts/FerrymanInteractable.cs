@@ -7,51 +7,29 @@ namespace AnEchoHasNoShape.Interaction
     public sealed class FerrymanInteractable : MonoBehaviour, IInteractable
     {
         [SerializeField] private string interactionVerb = "Take Ferry";
-        [SerializeField] private string question = "Take the ferry back?";
-        [Tooltip("If empty, an object named GlacierRespawnStart is used.")]
-        [SerializeField] private Transform destination;
-
         public string InteractionVerb => string.IsNullOrWhiteSpace(interactionVerb) ? "Take Ferry" : interactionVerb.Trim();
 
         public void Interact(PlayerInteractionController interactor)
         {
-            ConfirmationPromptUI.Show(question, () => Teleport(interactor));
+            ConfirmationPromptUI.ShowChoices("Where shall we take you?",
+                "Ancient Monument", () => Teleport(interactor, GameManager.PlayerCheckpoint.GlacierMonument, "GlacierRespawnMonument"),
+                "Unremembered City", () => Teleport(interactor, GameManager.PlayerCheckpoint.GlacierCity, "GlacierRespawnCity"));
         }
 
-        private void Teleport(PlayerInteractionController interactor)
+        private void Teleport(PlayerInteractionController interactor, GameManager.PlayerCheckpoint checkpoint, string locator)
         {
-            Transform target = destination;
-            if (target == null)
-            {
-                GameObject fallback = GameObject.Find("GlacierRespawnStart");
-                if (fallback == null)
-                {
-                    fallback = GameObject.Find("GlacierRespawn");
-                }
-                target = fallback != null ? fallback.transform : null;
-            }
-
-            FirstPersonController controller = interactor != null
-                ? interactor.GetComponent<FirstPersonController>()
+            GameObject target = GameObject.Find(locator);
+            FirstPersonController player = interactor != null
+                ? interactor.GetComponentInParent<FirstPersonController>()
                 : FindAnyObjectByType<FirstPersonController>();
-
-            if (target == null || controller == null)
+            GameManager manager = GameManager.Instance;
+            if (target == null || player == null || manager == null)
             {
-                Debug.LogWarning("Ferryman could not find the player or GlacierRespawnStart destination.", this);
+                Debug.LogWarning("Ferry could not resolve player, GameManager or destination: " + locator, this);
                 return;
             }
-
-            GameManager gameManager = GameManager.Instance != null
-                ? GameManager.Instance
-                : FindAnyObjectByType<GameManager>();
-
-            if (gameManager == null || !gameManager.TeleportPlayerWithFade(controller, target))
-            {
-                Debug.LogWarning("Ferryman could not start its travel transition.", this);
-                return;
-            }
-
-            gameManager.SetCheckpoint(GameManager.PlayerCheckpoint.GlacierStart);
+            if (manager.TeleportPlayerWithFade(player, target.transform))
+                manager.SetCheckpoint(checkpoint);
         }
     }
 }

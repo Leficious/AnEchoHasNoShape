@@ -101,6 +101,7 @@ namespace AnEchoHasNoShape.Echolocation
             ActivePulseSequence = 0;
             Shader.SetGlobalFloat(PulseActiveId, 0f);
             Shader.SetGlobalFloat(SirenActiveId, 0f);
+            Shader.SetGlobalFloat("_GrassPlayerEchoValid", 0f);
         }
 
         private void Awake()
@@ -229,7 +230,8 @@ namespace AnEchoHasNoShape.Echolocation
                 fogRevealStrength,
                 wireframeStrength,
                 wireframeScale,
-                wireframeThickness);
+                wireframeThickness,
+                speed);
         }
 
         public static int BeginSharedPulse(Vector3 origin, float pulseRange)
@@ -263,7 +265,8 @@ namespace AnEchoHasNoShape.Echolocation
             float pulseFogRevealStrength,
             float pulseWireframeStrength,
             float pulseWireframeScale,
-            float pulseWireframeThickness)
+            float pulseWireframeThickness,
+            float propagationSpeed = 14f)
         {
             if (!OwnsSharedPulse(token))
             {
@@ -277,6 +280,9 @@ namespace AnEchoHasNoShape.Echolocation
 
             Shader.SetGlobalVector(PulseOriginId, origin);
             Shader.SetGlobalFloat(PulseRadiusId, radius);
+            Shader.SetGlobalFloat("_GrassPlayerEchoValid", 1f);
+            Shader.SetGlobalFloat("_GrassPlayerEchoPublishedAt", Time.time);
+            Shader.SetGlobalFloat("_EchoPulseSpeed", propagationSpeed);
             Shader.SetGlobalFloat(PulseWidthId, width);
             Shader.SetGlobalFloat(TrailLengthId, trailLength);
             Shader.SetGlobalFloat(PulseIntensityId, intensity);
@@ -316,10 +322,12 @@ namespace AnEchoHasNoShape.Echolocation
             float spacing,
             float pulseRange,
             float fadeDistance,
-            float pulseFogRevealStrength)
+            float pulseFogRevealStrength,
+            float propagationSpeed = 14f)
         {
             Shader.SetGlobalVector(SirenOriginId, origin);
             Shader.SetGlobalFloat(SirenRadiusId, radius);
+            Shader.SetGlobalFloat("_SirenEchoPulseSpeed", propagationSpeed);
             Shader.SetGlobalFloat(SirenWidthId, width);
             Shader.SetGlobalFloat(SirenTrailLengthId, sirenTrailLength);
             Shader.SetGlobalFloat(SirenIntensityId, intensity);

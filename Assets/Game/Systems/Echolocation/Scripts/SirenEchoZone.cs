@@ -114,7 +114,8 @@ namespace AnEchoHasNoShape.Echolocation
                 pulseSpacing,
                 pulseRange,
                 fadeOutDistance,
-                fogRevealStrength);
+                fogRevealStrength,
+                pulseSpeed);
 
             float finalRingDelay = pulseCount switch
             {
@@ -166,7 +167,8 @@ namespace AnEchoHasNoShape.Echolocation
                 pulseSpacing,
                 pulseRange,
                 fadeOutDistance,
-                fogRevealStrength);
+                fogRevealStrength,
+                pulseSpeed);
 
             if (sirenClip != null)
             {

@@ -14,9 +14,11 @@ namespace AnEchoHasNoShape.Echolocation
         [SerializeField, Min(1f)] private float pulseSpeed = 35f;
         [SerializeField, Min(0.1f)] private float failureFadeDuration = 0.65f;
         private EchoReactiveSurface[] surfaces;
-        private readonly Vector4[] waveOrigins = new Vector4[4];
-        private readonly Vector4[] waveColors = new Vector4[4];
-        private readonly Vector4[] waveSettings = new Vector4[4];
+        private readonly Vector4[] waveOrigins = new Vector4[5];
+        private readonly Vector4[] waveColors = new Vector4[5];
+        private readonly Vector4[] waveSettings = new Vector4[5];
+        private ReadableTextInteractable centerReadable;
+        private Transform centerTabletTransform;
         private int waveCount, lastCharacter = -1;
         private bool validChain = true;
         private Collider outerBounds;
@@ -56,6 +58,9 @@ namespace AnEchoHasNoShape.Echolocation
             GameObject centerTablet = GameObject.Find("CityCenterTablet");
             if (centerTablet != null)
             {
+                centerTabletTransform = centerTablet.transform;
+                centerReadable = centerTablet.GetComponentInChildren<ReadableTextInteractable>(true);
+                if (centerReadable != null) centerReadable.ReadingCompleted += TriggerNeutralEcho;
                 EchoColorOverride colorOverride = centerTablet.GetComponentInChildren<EchoColorOverride>(true);
                 Color gold = centerTabletGold;
                 if (colorOverride != null) colorOverride.SetEchoColor(gold);
@@ -111,10 +116,10 @@ namespace AnEchoHasNoShape.Echolocation
         {
             if (!isActiveAndEnabled || surfaces == null) return false;
             int character = state == "muse" ? 0 : state == "ruler" ? 1 : state == "architect" ? 2 : -1;
-            if (character < 0 && state != "reset" && state != "gold") return false;
+            if (character < 0 && state != "reset" && state != "gold" && state != "neutral") return false;
 
             // Every command starts a fresh state, even after permanent completion.
-            // This also prevents repeated debug pulses overflowing the four-wave buffer.
+            // This also prevents repeated debug pulses overflowing the wave buffer.
             waving = failing = completed = goldStarted = false;
             stage = waveCount = 0;
             lastCharacter = -1;
@@ -124,6 +129,11 @@ namespace AnEchoHasNoShape.Echolocation
             WorldReverberationController world = WorldReverberationController.Instance;
             world?.StopReverberation();
             if (state == "reset") return true;
+            if (state == "neutral")
+            {
+                TriggerNeutralEcho();
+                return true;
+            }
             if (state == "gold")
             {
                 completed = goldStarted = true;
@@ -142,6 +152,13 @@ namespace AnEchoHasNoShape.Echolocation
                 character == 0 ? museColor : character == 1 ? rulerColor : architectColor,
                 perspective: character + 1);
             return true;
+        }
+
+        public void TriggerNeutralEcho()
+        {
+            if (!isActiveAndEnabled || surfaces == null || completed || failing || stage > 0 || waveCount > 0) return;
+            BeginWave(centerTabletTransform != null ? centerTabletTransform.position : transform.position,
+                Color.white, perspective: 0);
         }
 
         public void Visit(int character, Vector3 position)
@@ -241,6 +258,11 @@ namespace AnEchoHasNoShape.Echolocation
         private void OnDisable()
         {
             ResetShaderState();
+        }
+
+        private void OnDestroy()
+        {
+            if (centerReadable != null) centerReadable.ReadingCompleted -= TriggerNeutralEcho;
         }
 
         public float PerspectiveVisibility(int perspective, Vector3 position)

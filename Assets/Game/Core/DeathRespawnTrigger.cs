@@ -90,7 +90,6 @@ namespace AnEchoHasNoShape.Core
             GameManager gameManager = GameManager.Instance != null
                 ? GameManager.Instance
                 : FindAnyObjectByType<GameManager>();
-            gameManager?.RegisterGlacierDeath();
 
             Transform respawnPoint = gameManager != null
                 ? gameManager.GetCurrentCheckpointTransform()

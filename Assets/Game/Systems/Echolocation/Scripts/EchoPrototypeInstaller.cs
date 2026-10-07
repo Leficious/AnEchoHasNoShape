@@ -30,7 +30,8 @@ namespace AnEchoHasNoShape.Echolocation
                 if (renderer.GetComponent<MeshFilter>() == null ||
                     (renderer.gameObject.hideFlags & HideFlags.DontSave) != 0 ||
                     renderer.transform.root.CompareTag("Player") ||
-                    renderer.GetComponentInParent<EchoRenderingExclusion>(true) != null)
+                    renderer.GetComponentInParent<EchoRenderingExclusion>(true) != null ||
+                    UsesGrassWash(renderer))
                 {
                     continue;
                 }
@@ -70,6 +71,16 @@ namespace AnEchoHasNoShape.Echolocation
 
                 TerrainTreeEchoProxy.EnsureFor(terrain);
             }
+        }
+
+        private static bool UsesGrassWash(MeshRenderer renderer)
+        {
+            Material[] materials = renderer.sharedMaterials;
+            if (materials.Length == 0) return false;
+            foreach (Material material in materials)
+                if (material == null || !material.HasProperty("_GrassEchoStrength") ||
+                    material.GetFloat("_GrassEchoStrength") <= 0f) return false;
+            return true;
         }
 
         private static bool IsWaterRenderer(MeshRenderer renderer)

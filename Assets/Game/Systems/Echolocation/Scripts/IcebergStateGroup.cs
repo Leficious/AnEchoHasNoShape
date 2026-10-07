@@ -31,6 +31,7 @@ namespace AnEchoHasNoShape.Echolocation
         [SerializeField, Min(0f)] private float landingDamping = 7.5f;
 
         public IcebergEchoState State => state;
+        private bool setupPending;
 
         public void Configure(IcebergEchoState newState)
         {
@@ -65,30 +66,32 @@ namespace AnEchoHasNoShape.Echolocation
 
         private void Awake()
         {
-            ApplyState();
-            InstallFakeBuoyancy();
+            setupPending = true;
         }
 
         private void OnEnable()
         {
-            ApplyState();
+            setupPending = true;
         }
 
         private void OnValidate()
         {
-            ApplyState();
-
-            if (Application.isPlaying)
-            {
-                InstallFakeBuoyancy();
-            }
+            // Validation may run while Unity is loading/checking objects.
+            // Do not mutate components or physics state from that callback.
+            setupPending = true;
         }
 
         private void OnTransformChildrenChanged()
         {
-            ApplyState();
+            setupPending = true;
+        }
 
-            if (Application.isPlaying)
+        private void Update()
+        {
+            if (!setupPending) return;
+            setupPending = false;
+            ApplyState();
+            if (Application.IsPlaying(gameObject))
             {
                 InstallFakeBuoyancy();
             }
@@ -96,7 +99,7 @@ namespace AnEchoHasNoShape.Echolocation
 
         private void InstallFakeBuoyancy()
         {
-            if (!Application.isPlaying || !enableFakeBuoyancy)
+            if (!Application.IsPlaying(gameObject) || !enableFakeBuoyancy)
             {
                 return;
             }

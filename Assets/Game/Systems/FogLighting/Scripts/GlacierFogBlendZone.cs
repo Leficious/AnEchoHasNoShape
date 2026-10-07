@@ -11,6 +11,13 @@ namespace AnEchoHasNoShape.FogLighting
         [Header("Blend Areas")]
         [SerializeField] private SphereCollider outerArea;
         [SerializeField] private SphereCollider innerArea;
+        [System.Serializable]
+        private struct AreaPair
+        {
+            public SphereCollider outer;
+            public SphereCollider inner;
+        }
+        [SerializeField] private AreaPair[] additionalAreas = System.Array.Empty<AreaPair>();
 
         [Header("Glacier Fog")]
         [SerializeField] private bool smoothTransition = true;
@@ -54,6 +61,25 @@ namespace AnEchoHasNoShape.FogLighting
             }
 
             zone.Configure(outer, inner);
+            var pairs = new System.Collections.Generic.List<AreaPair>();
+            foreach (SphereCollider candidate in Object.FindObjectsByType<SphereCollider>(FindObjectsInactive.Include))
+            {
+                const string prefix = "GlacierAreaOuter";
+                if (candidate == outer || !candidate.name.StartsWith(prefix + " (", System.StringComparison.Ordinal)) continue;
+                string innerName = "GlacierAreaInner" + candidate.name.Substring(prefix.Length);
+                SphereCollider pairedInner = null;
+                foreach (SphereCollider match in Object.FindObjectsByType<SphereCollider>(FindObjectsInactive.Include))
+                    if (match.name == innerName) { pairedInner = match; break; }
+                if (pairedInner == null)
+                {
+                    Debug.LogWarning("Missing matching glacier sphere: " + innerName, candidate);
+                    continue;
+                }
+                ExcludeTriggerVisualization(candidate.gameObject);
+                ExcludeTriggerVisualization(pairedInner.gameObject);
+                pairs.Add(new AreaPair { outer = candidate, inner = pairedInner });
+            }
+            zone.additionalAreas = pairs.ToArray();
         }
 
         private static void ExcludeTriggerVisualization(GameObject triggerObject)
@@ -62,6 +88,8 @@ namespace AnEchoHasNoShape.FogLighting
             {
                 triggerObject.AddComponent<EchoRenderingExclusion>();
             }
+            if (triggerObject.GetComponent<IgnoreEcholocation>() == null)
+                triggerObject.AddComponent<IgnoreEcholocation>();
 
             // Handles either ordering of the two runtime installers.
             EchoReactiveSurface[] existingSurfaces = triggerObject.GetComponentsInChildren<EchoReactiveSurface>(true);
@@ -95,21 +123,14 @@ namespace AnEchoHasNoShape.FogLighting
                 FindEnvironmentRigs();
             }
 
-            if (player == null || outerArea == null || innerArea == null || GameManager.Instance == null)
+            if (player == null || GameManager.Instance == null)
             {
                 return;
             }
 
-            Vector3 outerCenter = outerArea.transform.TransformPoint(outerArea.center);
-            Vector3 innerCenter = innerArea.transform.TransformPoint(innerArea.center);
-            float outerRadius = GetWorldRadius(outerArea);
-            float innerRadius = GetWorldRadius(innerArea);
-
-            // The authored glacier volumes are concentric. Averaging their centers
-            // makes the blend remain stable if one is nudged by a small amount.
-            Vector3 blendCenter = (outerCenter + innerCenter) * 0.5f;
-            float distance = Vector3.Distance(player.position, blendCenter);
-            float blend = Mathf.InverseLerp(outerRadius, innerRadius, distance);
+            float blend = EvaluatePair(outerArea, innerArea, player.position);
+            foreach (AreaPair pair in additionalAreas)
+                blend = Mathf.Max(blend, EvaluatePair(pair.outer, pair.inner, player.position));
 
             if (smoothTransition)
             {
@@ -153,6 +174,19 @@ namespace AnEchoHasNoShape.FogLighting
             Vector3 scale = sphere.transform.lossyScale;
             float largestAxis = Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.y), Mathf.Abs(scale.z));
             return sphere.radius * largestAxis;
+        }
+
+        private static float EvaluatePair(SphereCollider outer, SphereCollider inner, Vector3 position)
+        {
+            if (outer == null || inner == null || !outer.enabled || !inner.enabled ||
+                !outer.gameObject.activeInHierarchy || !inner.gameObject.activeInHierarchy) return 0f;
+            float outerMargin = GetWorldRadius(outer) - Vector3.Distance(position, outer.transform.TransformPoint(outer.center));
+            if (outerMargin <= 0f) return 0f;
+            float innerDistance = Vector3.Distance(position, inner.transform.TransformPoint(inner.center)) - GetWorldRadius(inner);
+            if (innerDistance <= 0f) return 1f;
+            // Matches the original blend for concentric spheres, while honoring
+            // both actual boundaries if an inner sphere is shifted slightly.
+            return Mathf.Clamp01(outerMargin / (outerMargin + innerDistance));
         }
 
         private void OnDisable()

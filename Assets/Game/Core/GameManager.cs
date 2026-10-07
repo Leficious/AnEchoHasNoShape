@@ -12,11 +12,12 @@ namespace AnEchoHasNoShape
     {
         public enum DevelopmentSpawnPoint
         {
-            CenterMonument,
-            GlacierStart,
-            GlacierMid,
-            GlacierEnd,
-            CityMainEntrance
+            CenterMonument = 0,
+            GlacierMonument = 1,
+            GlacierMid = 2,
+            GlacierEnd = 3,
+            CityMainEntrance = 4,
+            GlacierCity = 5
         }
 
         public enum PlayerCheckpoint
@@ -25,7 +26,9 @@ namespace AnEchoHasNoShape
             GlacierStart,
             GlacierMid,
             GlacierEnd,
-            CityMainEntrance
+            CityMainEntrance,
+            GlacierCity,
+            GlacierMonument
         }
 
         public static GameManager Instance { get; private set; }
@@ -71,8 +74,11 @@ namespace AnEchoHasNoShape
         [Tooltip("Optional explicit monument spawn. If empty, an object named MonumentSpawn is used.")]
         [SerializeField] private Transform centerMonumentSpawn;
 
-        [Tooltip("Optional explicit glacier-start spawn. If empty, an object named GlacierRespawnStart is used.")]
-        [SerializeField] private Transform glacierStartSpawn;
+        [Tooltip("Optional monument-side glacier spawn. Otherwise uses GlacierRespawnMonument.")]
+        [UnityEngine.Serialization.FormerlySerializedAs("glacierStartSpawn")]
+        [SerializeField] private Transform glacierMonumentSpawn;
+        [Tooltip("Optional city-side glacier spawn. Otherwise uses GlacierRespawnCity.")]
+        [SerializeField] private Transform glacierCitySpawn;
 
         [Tooltip("Optional glacier-midpoint spawn. If empty, an object named GlacierRespawnMid is used.")]
         [SerializeField] private Transform glacierMidSpawn;
@@ -123,6 +129,8 @@ namespace AnEchoHasNoShape
             currentCheckpoint = PlayerCheckpoint.Monument;
             EnsureEchoIgnored("GlacierAreaOuter");
             EnsureEchoIgnored("GlacierAreaInner");
+            InstallGlacierEntrance("GlacierCityTrigger", PlayerCheckpoint.GlacierCity);
+            InstallGlacierEntrance("GlacierMonumentTrigger", PlayerCheckpoint.GlacierMonument);
             echoUnlocked = startWithEchoUnlocked;
             volumetricFogMaterial = Resources.Load<Material>(VolumetricFogResourcePath);
             CaptureDefaultFogColor();
@@ -165,8 +173,12 @@ namespace AnEchoHasNoShape
                     SetCheckpoint(PlayerCheckpoint.CityMainEntrance);
                     destination = GetCurrentCheckpointTransform();
                     break;
-                case DevelopmentSpawnPoint.GlacierStart:
-                    SetCheckpoint(PlayerCheckpoint.GlacierStart);
+                case DevelopmentSpawnPoint.GlacierMonument:
+                    SetCheckpoint(PlayerCheckpoint.GlacierMonument);
+                    destination = GetCurrentCheckpointTransform();
+                    break;
+                case DevelopmentSpawnPoint.GlacierCity:
+                    SetCheckpoint(PlayerCheckpoint.GlacierCity);
                     destination = GetCurrentCheckpointTransform();
                     break;
                 case DevelopmentSpawnPoint.GlacierMid:
@@ -217,10 +229,14 @@ namespace AnEchoHasNoShape
                 return ResolveCheckpoint(PlayerCheckpoint.Monument);
             }
 
-            if (string.Equals(pointName, "glacierstart", System.StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(pointName, "glaciermonument", System.StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(pointName, "glacierstart", System.StringComparison.OrdinalIgnoreCase))
             {
-                return ResolveCheckpoint(PlayerCheckpoint.GlacierStart);
+                return ResolveCheckpoint(PlayerCheckpoint.GlacierMonument);
             }
+
+            if (string.Equals(pointName, "glaciercity", System.StringComparison.OrdinalIgnoreCase))
+                return ResolveCheckpoint(PlayerCheckpoint.GlacierCity);
 
             if (string.Equals(pointName, "glaciermid", System.StringComparison.OrdinalIgnoreCase))
             {
@@ -248,12 +264,15 @@ namespace AnEchoHasNoShape
             return true;
         }
 
-        public void RegisterGlacierDeath()
+        private void InstallGlacierEntrance(string objectName, PlayerCheckpoint checkpoint)
         {
-            if (currentCheckpoint == PlayerCheckpoint.Monument)
-            {
-                SetCheckpoint(PlayerCheckpoint.GlacierStart);
-            }
+            GameObject target = GameObject.Find(objectName);
+            if (target == null) { Debug.LogWarning("Missing glacier entrance: " + objectName, this); return; }
+            if (target.GetComponent<EchoRenderingExclusion>() == null) target.AddComponent<EchoRenderingExclusion>();
+            EnsureEchoIgnored(objectName);
+            var trigger = target.GetComponent<GlacierEntranceCheckpoint>();
+            if (trigger == null) trigger = target.AddComponent<GlacierEntranceCheckpoint>();
+            trigger.Configure(checkpoint);
         }
 
         public Transform GetCurrentCheckpointTransform()
@@ -394,7 +413,9 @@ namespace AnEchoHasNoShape
             {
                 PlayerCheckpoint.CityMainEntrance => ResolveTransform(cityMainEntranceSpawn, "CityMainEntrance"),
                 PlayerCheckpoint.GlacierStart => ResolveTransform(
-                    glacierStartSpawn, "GlacierRespawnStart", "GlacierRespawn"),
+                    glacierMonumentSpawn, "GlacierRespawnMonument", "GlacierRespawnStart", "GlacierRespawn"),
+                PlayerCheckpoint.GlacierCity => ResolveTransform(glacierCitySpawn, "GlacierRespawnCity"),
+                PlayerCheckpoint.GlacierMonument => ResolveTransform(glacierMonumentSpawn, "GlacierRespawnMonument"),
                 PlayerCheckpoint.GlacierMid => ResolveTransform(
                     glacierMidSpawn, "GlacierRespawnMid"),
                 PlayerCheckpoint.GlacierEnd => ResolveTransform(

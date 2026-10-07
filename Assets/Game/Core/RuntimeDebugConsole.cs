@@ -26,13 +26,15 @@ namespace AnEchoHasNoShape
             "/fog on",
             "/fog off",
             "/tp centermonument",
-            "/tp glacierstart",
+            "/tp glaciermonument",
+            "/tp glaciercity",
             "/tp glaciermid",
             "/tp glacierend",
             "/tp citymainentrance",
             "/echo unlock",
             "/tutorial complete",
             "/reverb",
+            "/city neutral",
             "/city muse",
             "/city ruler",
             "/city architect",
@@ -49,13 +51,15 @@ namespace AnEchoHasNoShape
             "Enable fog in god mode",
             "Disable fog in god mode",
             "Teleport to the central monument",
-            "Teleport to the glacier entrance",
+            "Teleport to the monument-side glacier entrance",
+            "Teleport to the city-side glacier entrance",
             "Teleport to the glacier midpoint",
             "Teleport to the glacier endpoint",
             "Teleport to the Unremembered City main entrance",
             "Unlock the echo ability",
             "Apply completed tutorial progression",
             "Trigger a world reverberation",
+            "Trigger the center tablet's white city state",
             "Trigger the Muse's blue city state",
             "Trigger the Ruler's red city state",
             "Trigger the Architect's green city state",
@@ -314,11 +318,11 @@ namespace AnEchoHasNoShape
             switch (parts[0].ToLowerInvariant())
             {
                 case "help":
-                    result = "/tp centermonument | /tp glacierstart | /tp glaciermid | /tp glacierend | /tp citymainentrance | /god | /player | /fog [on|off] | /echo unlock | /tutorial complete | /reverb | /city <muse|ruler|architect|reset|gold>";
+                    result = "/tp centermonument | /tp glaciermonument | /tp glaciercity | /tp glaciermid | /tp glacierend | /tp citymainentrance | /god | /player | /fog [on|off] | /echo unlock | /tutorial complete | /reverb | /city <neutral|muse|ruler|architect|reset|gold>";
                     break;
                 case "city":
                     if (parts.Length != 2)
-                        result = "Usage: /city <muse|ruler|architect|reset|gold>";
+                        result = "Usage: /city <neutral|muse|ruler|architect|reset|gold>";
                     else
                     {
                         CitySequenceController city = FindAnyObjectByType<CitySequenceController>();
@@ -328,14 +332,14 @@ namespace AnEchoHasNoShape
                             result = $"City state: {parts[1].ToLowerInvariant()}.";
                             closeAfterExecution = true;
                         }
-                        else result = "City not ready or invalid state. Use /city <muse|ruler|architect|reset|gold>.";
+                        else result = "City not ready or invalid state. Use /city <neutral|muse|ruler|architect|reset|gold>.";
                     }
                     break;
                 case "fog":
                     result = SetDebugFog(parts);
                     break;
                 case "tp":
-                    result = parts.Length > 1 ? Teleport(parts[1]) : "Usage: /tp <centermonument|glacierstart|glaciermid|glacierend|citymainentrance>";
+                    result = parts.Length > 1 ? Teleport(parts[1]) : "Usage: /tp <centermonument|glaciermonument|glaciercity|glaciermid|glacierend|citymainentrance>";
                     break;
                 case "god":
                     SetGodMode(true);

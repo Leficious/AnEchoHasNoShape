@@ -41,6 +41,9 @@ namespace AnEchoHasNoShape.Echolocation
                 echoMaterial.CopyPropertiesFromMaterial(originalMaterial);
             }
 
+            // Match the instanced build-reference material even if copying the
+            // original terrain material above replaced its instancing setting.
+            echoMaterial.enableInstancing = true;
             sourceTerrain.materialTemplate = echoMaterial;
             RefreshEchoIgnoreState();
         }

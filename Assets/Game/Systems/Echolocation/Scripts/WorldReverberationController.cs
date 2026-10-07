@@ -108,6 +108,7 @@ namespace AnEchoHasNoShape.Echolocation
         {
             Shader.SetGlobalVector(OriginId, transform.position);
             Shader.SetGlobalFloat(RadiusId, radius);
+            Shader.SetGlobalFloat("_WorldReverbSpeed", speed);
             Shader.SetGlobalFloat(WidthId, bandWidth);
             Shader.SetGlobalFloat(TrailLengthId, trailLength);
             Shader.SetGlobalFloat(IntensityId, brightness);

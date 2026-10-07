@@ -42,6 +42,7 @@ namespace AnEchoHasNoShape.Interaction
         [SerializeField] private CheckpointAfterReading checkpointAfterFirstRead;
 
         private bool hasBeenRead;
+        public event System.Action ReadingCompleted;
 
         public string InteractionVerb => string.IsNullOrWhiteSpace(interactionVerb)
             ? "Interact"
@@ -65,6 +66,7 @@ namespace AnEchoHasNoShape.Interaction
         private void OnReadingCompleted()
         {
             ApplyCompletedState(true, true);
+            ReadingCompleted?.Invoke();
         }
 
         public void ApplyCompletedState(bool playReverberation, bool recordProgress = true)

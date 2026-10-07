@@ -18,6 +18,19 @@ namespace AnEchoHasNoShape.Echolocation.Editor
 
         public void OnPreprocessBuild(BuildReport report)
         {
+            // The terrain shader is assigned only at runtime. Keep an instanced
+            // material reference in Resources so player stripping retains it.
+            const string terrainMaterialPath = "Assets/Game/Resources/Rendering/EchoTerrainRuntime.mat";
+            Material terrainMaterial = AssetDatabase.LoadAssetAtPath<Material>(terrainMaterialPath);
+            if (terrainMaterial == null || terrainMaterial.shader == null)
+                throw new BuildFailedException("Missing echo terrain build-reference material or shader: " + terrainMaterialPath);
+            if (!terrainMaterial.enableInstancing)
+            {
+                terrainMaterial.enableInstancing = true;
+                EditorUtility.SetDirty(terrainMaterial);
+                AssetDatabase.SaveAssetIfDirty(terrainMaterial);
+            }
+
             HashSet<string> modelPaths = CollectTerrainTreeModelPaths();
             int changedCount = 0;
 

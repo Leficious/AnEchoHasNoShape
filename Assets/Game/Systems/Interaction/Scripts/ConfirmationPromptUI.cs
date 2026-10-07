@@ -8,8 +8,12 @@ namespace AnEchoHasNoShape.Interaction
     public sealed class ConfirmationPromptUI : MonoBehaviour
     {
         private static ConfirmationPromptUI instance;
+        private static int escapeConsumedFrame = -1;
+        public static bool ConsumedEscapeThisFrame => escapeConsumedFrame == Time.frameCount;
         private GameObject panelRoot;
         private Text questionText;
+        private Text firstLabel, secondLabel;
+        private bool destinationChoices;
         private Action yesAction;
         private Action noAction;
         private FirstPersonController player;
@@ -24,7 +28,13 @@ namespace AnEchoHasNoShape.Interaction
         public static void Show(string question, Action onYes, Action onNo = null)
         {
             if (instance == null) new GameObject("Confirmation Prompt UI").AddComponent<ConfirmationPromptUI>();
-            instance.Open(question, onYes, onNo);
+            instance.Open(question, onYes, onNo, "YES", "NO", false);
+        }
+
+        public static void ShowChoices(string question, string first, Action onFirst, string second, Action onSecond)
+        {
+            if (instance == null) new GameObject("Confirmation Prompt UI").AddComponent<ConfirmationPromptUI>();
+            instance.Open(question, onFirst, onSecond, first, second, true);
         }
 
         private void Awake()
@@ -42,16 +52,27 @@ namespace AnEchoHasNoShape.Interaction
         private void Update()
         {
             if (!IsOpen) return;
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                escapeConsumedFrame = Time.frameCount;
+                if (destinationChoices) Close();
+                else Cancel();
+                return;
+            }
+            if (destinationChoices) return;
             if (Input.GetKeyDown(KeyCode.Y)) Confirm();
-            else if (Input.GetKeyDown(KeyCode.N) || Input.GetKeyDown(KeyCode.Escape)) Cancel();
+            else if (Input.GetKeyDown(KeyCode.N)) Cancel();
         }
 
-        private void Open(string question, Action onYes, Action onNo)
+        private void Open(string question, Action onYes, Action onNo, string first, string second, bool choices)
         {
             if (IsOpen) return;
+            destinationChoices = choices;
+            firstLabel.text = first;
+            secondLabel.text = second;
             yesAction = onYes;
             noAction = onNo;
-            questionText.text = question;
+            questionText.text = question + (choices ? "\n<size=20>Esc to cancel</size>" : "");
             previousTimeScale = Time.timeScale;
             previousCursorLock = Cursor.lockState;
             previousCursorVisible = Cursor.visible;
@@ -134,11 +155,11 @@ namespace AnEchoHasNoShape.Interaction
 
             questionText = CreateText(panel, "Question", font, 34, new Vector2(0.08f, 0.47f), new Vector2(0.92f, 0.88f));
             questionText.alignment = TextAnchor.MiddleCenter;
-            CreateButton(panel, "YES", font, new Vector2(0.1f, 0.13f), new Vector2(0.46f, 0.4f), Confirm);
-            CreateButton(panel, "NO", font, new Vector2(0.54f, 0.13f), new Vector2(0.9f, 0.4f), Cancel);
+            firstLabel = CreateButton(panel, "YES", font, new Vector2(0.1f, 0.13f), new Vector2(0.46f, 0.4f), Confirm);
+            secondLabel = CreateButton(panel, "NO", font, new Vector2(0.54f, 0.13f), new Vector2(0.9f, 0.4f), Cancel);
         }
 
-        private static void CreateButton(Transform parent, string label, Font font, Vector2 min, Vector2 max, Action action)
+        private static Text CreateButton(Transform parent, string label, Font font, Vector2 min, Vector2 max, Action action)
         {
             GameObject obj = new GameObject(label, typeof(RectTransform), typeof(Image), typeof(Button));
             RectTransform rect = obj.GetComponent<RectTransform>();
@@ -156,6 +177,10 @@ namespace AnEchoHasNoShape.Interaction
             text.text = label;
             text.alignment = TextAnchor.MiddleCenter;
             text.raycastTarget = false;
+            text.resizeTextForBestFit = true;
+            text.resizeTextMinSize = 18;
+            text.resizeTextMaxSize = 27;
+            return text;
         }
 
         private static ColorBlock CreateColorBlock()
