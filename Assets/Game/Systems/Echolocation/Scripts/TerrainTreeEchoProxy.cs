@@ -74,6 +74,14 @@ namespace AnEchoHasNoShape.Echolocation
 
                 foreach (MeshRenderer sourceRenderer in GetEchoLodRenderers(prefab))
                 {
+                    // Terrain renders prefab meshes without instantiating their
+                    // scripts. Inspect the authored marker before combining them;
+                    // the generated proxy hierarchy no longer contains the prefab.
+                    if (HasPrefabIgnoreMarker(sourceRenderer.transform, prefab.transform))
+                    {
+                        continue;
+                    }
+
                     MeshFilter sourceFilter = sourceRenderer.GetComponent<MeshFilter>();
                     Mesh sourceMesh = sourceFilter != null ? sourceFilter.sharedMesh : null;
                     if (sourceMesh == null)
@@ -98,7 +106,8 @@ namespace AnEchoHasNoShape.Echolocation
                             subMeshIndex,
                             meshToPrefab,
                             sourceMaterial,
-                            prefab.name);
+                            prefab.name,
+                            WoodsIllusionTree.IsIllusion(sourceRenderer.transform));
                     }
                 }
             }
@@ -112,7 +121,8 @@ namespace AnEchoHasNoShape.Echolocation
             int subMeshIndex,
             Matrix4x4 meshToPrefab,
             Material sourceMaterial,
-            string prototypeName)
+            string prototypeName,
+            bool woodsIllusion)
         {
             var combines = new List<CombineInstance>();
 
@@ -167,6 +177,7 @@ namespace AnEchoHasNoShape.Echolocation
             renderer.lightProbeUsage = LightProbeUsage.Off;
             renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
 
+            if (woodsIllusion) proxy.AddComponent<WoodsIllusionTree>();
             proxy.AddComponent<EchoReactiveSurface>();
 
             // EchoReactiveSurface has already copied the mesh/material data into
@@ -237,6 +248,22 @@ namespace AnEchoHasNoShape.Echolocation
         {
             return prefab != null &&
                 prefab.name.IndexOf("Pine", System.StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool HasPrefabIgnoreMarker(Transform rendererTransform, Transform prefabRoot)
+        {
+            for (Transform current = rendererTransform; current != null; current = current.parent)
+            {
+                // Prefab assets are not active scene objects. Check the authored
+                // enabled flag, not isActiveAndEnabled, which is unreliable here.
+                if (current.TryGetComponent(out IgnoreEcholocation marker) && marker.enabled)
+                    return true;
+
+                if (current == prefabRoot)
+                    break;
+            }
+
+            return false;
         }
 
         private void OnDestroy()

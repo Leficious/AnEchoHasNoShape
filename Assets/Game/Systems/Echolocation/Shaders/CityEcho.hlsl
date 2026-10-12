@@ -5,6 +5,16 @@ float4 _CityWaveColors[5];
 float4 _CityWaveSettings[5]; // speed, range, width, perspective (0 white, 1 blue, 2 red, 3 green, 4 gold)
 int _CityWaveCount;
 float _CitySequenceVisibility;
+float _CityFailureActive;
+float3 _CityFailureOrigin;
+float4 _CityFailureWave;
+
+float CityFailureVisibilityAt(float3 positionWS)
+{
+    float radius = max(0, _Time.y - _CityFailureWave.x) * _CityFailureWave.y;
+    return 1 - _CityFailureActive * smoothstep(0, max(0.1, _CityFailureWave.z),
+        radius - distance(positionWS, _CityFailureOrigin));
+}
 
 half3 CityCharacterColorAt(float3 positionWS, half3 identityColor)
 {
@@ -30,7 +40,7 @@ float CityPerspectiveAt(float3 positionWS, float perspective)
         float target = abs(_CityWaveSettings[i].w - perspective) < 0.5 || _CityWaveSettings[i].w > 3.5 ? 1 : 0;
         amount = lerp(amount, target, reached);
     }
-    return amount * _CitySequenceVisibility;
+    return amount * _CitySequenceVisibility * CityFailureVisibilityAt(positionWS);
 }
 
 void CityEchoAt(float3 positionWS, out half3 heldColor, out float heldAmount, out half3 movingColor)
@@ -52,7 +62,8 @@ void CityEchoAt(float3 positionWS, out half3 heldColor, out float heldAmount, ou
             * (1 - smoothstep(_CityWaveSettings[i].y, _CityWaveSettings[i].y + width, radius));
         if (_CityWaveSettings[i].w < 3.5) movingColor += _CityWaveColors[i].rgb * ring * 2;
     }
-    heldAmount *= _CitySequenceVisibility;
-    movingColor *= _CitySequenceVisibility;
+    float visibility = _CitySequenceVisibility * CityFailureVisibilityAt(positionWS);
+    heldAmount *= visibility;
+    movingColor *= visibility;
 }
 #endif

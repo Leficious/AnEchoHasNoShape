@@ -171,10 +171,16 @@ namespace AnEchoHasNoShape.Echolocation
             Terrain[] childTerrains = GetComponentsInChildren<Terrain>(true);
             foreach (Terrain terrain in childTerrains)
             {
-                if (!IsIgnored(terrain.transform) && terrain.GetComponent<EchoReactiveTerrain>() == null)
+                if (IsIgnored(terrain.transform))
+                    continue;
+
+                if (terrain.GetComponent<EchoReactiveTerrain>() == null)
                 {
                     terrain.gameObject.AddComponent<EchoReactiveTerrain>();
                 }
+
+                // Tree proxies were also skipped if this terrain started ignored.
+                TerrainTreeEchoProxy.EnsureFor(terrain);
             }
         }
     }

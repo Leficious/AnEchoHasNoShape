@@ -73,6 +73,8 @@ namespace AnEchoHasNoShape.Interaction
         {
             if (hasBeenRead) return;
             hasBeenRead = true;
+            bool glacierEnd = gameObject.name.Replace(" ", string.Empty).Equals("IceTabletEnd", System.StringComparison.OrdinalIgnoreCase);
+            bool woodsEnd = gameObject.name.Replace(" ", string.Empty).Equals("WoodsTabletEnd", System.StringComparison.OrdinalIgnoreCase);
 
             if (unlockEchoAfterFirstRead)
             {
@@ -83,12 +85,19 @@ namespace AnEchoHasNoShape.Interaction
                 }
             }
 
-            if (triggerWorldReverberationAfterFirstRead && playReverberation)
+            if ((triggerWorldReverberationAfterFirstRead || glacierEnd || woodsEnd) && playReverberation)
             {
                 WorldReverberationController.Instance?.TriggerReverberation();
             }
 
-            if (triggerWorldReverberationAfterFirstRead && recordProgress)
+            if (glacierEnd) IcebergStateGroup.CompleteGlacier(playReverberation);
+            if (woodsEnd)
+            {
+                WoodsIllusionTree.HideAllIllusions(playReverberation);
+                WoodsGuideShimmer.RevealRoute();
+            }
+
+            if ((triggerWorldReverberationAfterFirstRead || glacierEnd || woodsEnd) && recordProgress)
             {
                 GameManager.Instance?.RegisterWorldReverberationCompletion();
             }

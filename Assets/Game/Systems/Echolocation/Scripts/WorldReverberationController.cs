@@ -33,9 +33,12 @@ namespace AnEchoHasNoShape.Echolocation
         [SerializeField, ColorUsage(true, true)] private Color reverberationColor = new Color(1f, 0.66f, 0.2f, 1f);
         [SerializeField, Range(0f, 1f)] private float fogRevealStrength = 0.85f;
 
-        [Header("Optional Audio")]
+        [Header("Global Echo Audio")]
         [SerializeField] private AudioSource audioSource;
-        [SerializeField] private AudioClip reverberationClip;
+        [Tooltip("Optional sound played once when a global echo begins. Leave empty for silence.")]
+        [UnityEngine.Serialization.FormerlySerializedAs("reverberationClip")]
+        [SerializeField] private AudioClip globalEchoSound;
+        [SerializeField, Range(0f, 1f)] private float globalEchoVolume = 1f;
 
         private float radius;
         private bool isActive;
@@ -43,6 +46,7 @@ namespace AnEchoHasNoShape.Echolocation
         public bool IsActive => isActive;
         public Color ReverberationColor => reverberationColor;
         public float PulseSpeed => speed;
+        public float PulseDuration => (range + fadeOutDistance) / Mathf.Max(0.1f, speed);
 
         private void Awake()
         {
@@ -58,6 +62,13 @@ namespace AnEchoHasNoShape.Echolocation
             if (audioSource == null)
             {
                 audioSource = GetComponent<AudioSource>();
+                if (audioSource == null)
+                {
+                    audioSource = gameObject.AddComponent<AudioSource>();
+                    audioSource.playOnAwake = false;
+                    audioSource.spatialBlend = 0f;
+                    audioSource.loop = false;
+                }
             }
         }
 
@@ -90,9 +101,9 @@ namespace AnEchoHasNoShape.Echolocation
             isActive = true;
             Publish();
 
-            if (audioSource != null && reverberationClip != null)
+            if (audioSource != null && globalEchoSound != null)
             {
-                audioSource.PlayOneShot(reverberationClip);
+                audioSource.PlayOneShot(globalEchoSound, globalEchoVolume);
             }
         }
 

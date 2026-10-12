@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.Core.GameAudioLibrary
   echoClip: {fileID: 8300000, guid: db5d7b509cb9c4e4bb32b91104b70cf7, type: 3}
   echoVolume: 0.676
+  cityEchoClip: {fileID: 8300000, guid: 693b00f6fdd8409429149c27f3ed327f, type: 3}
+  cityEchoVolume: 0.75
   ambienceClip: {fileID: 8300000, guid: a4200e78d04b06d46ac47f34bda09b59, type: 3}
   ambienceVolume: 0.524
   wavesClip: {fileID: 8300000, guid: 3467508a5cfef494392f908d06a9f980, type: 3}

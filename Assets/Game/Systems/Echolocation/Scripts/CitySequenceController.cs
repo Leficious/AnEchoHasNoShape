@@ -13,6 +13,11 @@ namespace AnEchoHasNoShape.Echolocation
         [SerializeField] private Color centerTabletGold = new Color(1f, 0.86f, 0.36f);
         [SerializeField, Min(1f)] private float pulseSpeed = 35f;
         [SerializeField, Min(0.1f)] private float failureFadeDuration = 0.65f;
+        [SerializeField, Min(1f)] private float failureWaveSpeed = 45f;
+        [SerializeField, Min(0.1f)] private float failureWaveWidth = 8f;
+        private bool spatialFailure;
+        private Vector3 failureOrigin;
+        private float failureWaveDuration;
         private EchoReactiveSurface[] surfaces;
         private readonly Vector4[] waveOrigins = new Vector4[5];
         private readonly Vector4[] waveColors = new Vector4[5];
@@ -22,6 +27,7 @@ namespace AnEchoHasNoShape.Echolocation
         private int waveCount, lastCharacter = -1;
         private bool validChain = true;
         private Collider outerBounds;
+        private Collider innerBounds;
         private Transform player;
         private bool wasInside;
         private Vector3 origin;
@@ -50,6 +56,7 @@ namespace AnEchoHasNoShape.Echolocation
         {
             Shader.SetGlobalInt("_CityWaveCount", 0);
             Shader.SetGlobalFloat("_CitySequenceVisibility", 0f);
+            Shader.SetGlobalFloat("_CityFailureActive", 0f);
         }
 
         private void Start()
@@ -70,7 +77,12 @@ namespace AnEchoHasNoShape.Echolocation
                     gate.SetCityRevealSource(this);
             }
             foreach (Collider candidate in Object.FindObjectsByType<Collider>(FindObjectsInactive.Include))
+            {
                 if (candidate.name.Equals("CityOuterBounds", System.StringComparison.OrdinalIgnoreCase)) outerBounds = candidate;
+                if (candidate.name.Equals("CityInner", System.StringComparison.OrdinalIgnoreCase) ||
+                    candidate.name.Equals("CityInnerBounds", System.StringComparison.OrdinalIgnoreCase)) innerBounds = candidate;
+            }
+            if (innerBounds == null) Debug.LogWarning("City fog needs a CityInner or CityInnerBounds collider.", this);
             if (outerBounds == null) Debug.LogWarning("City sequence cannot reset on exit: CityOuterBounds collider missing.", this);
             string[] names = { "Muse", "Ruler", "Architect" };
             for (int i = 0; i < names.Length; i++)
@@ -128,7 +140,11 @@ namespace AnEchoHasNoShape.Echolocation
             ResetShaderState();
             WorldReverberationController world = WorldReverberationController.Instance;
             world?.StopReverberation();
-            if (state == "reset") return true;
+            if (state == "reset")
+            {
+                GameManager.Instance?.PlayCityEchoSound();
+                return true;
+            }
             if (state == "neutral")
             {
                 TriggerNeutralEcho();
@@ -176,7 +192,7 @@ namespace AnEchoHasNoShape.Echolocation
             completed = stage == 3;
         }
 
-        private void BeginFailure()
+        private void BeginFailure(bool playFeedback = true)
         {
             if (completed || failing) return;
             stage = 0;
@@ -185,10 +201,31 @@ namespace AnEchoHasNoShape.Echolocation
             waving = false;
             failing = true;
             failureStart = Time.time;
+            spatialFailure = playFeedback;
+            if (spatialFailure)
+            {
+                if (player == null)
+                {
+                    FirstPersonController controller = FindAnyObjectByType<FirstPersonController>();
+                    if (controller != null) player = controller.transform;
+                }
+                failureOrigin = player != null ? player.position : transform.position;
+                float distance = 1f;
+                foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
+                    distance = Mathf.Max(distance, Vector3.Distance(failureOrigin, renderer.bounds.center) + renderer.bounds.extents.magnitude);
+                if (outerBounds != null)
+                    distance = Mathf.Max(distance, Vector3.Distance(failureOrigin, outerBounds.bounds.center) + outerBounds.bounds.extents.magnitude);
+                failureWaveDuration = (distance + failureWaveWidth) / Mathf.Max(1f, failureWaveSpeed);
+                Shader.SetGlobalVector("_CityFailureOrigin", failureOrigin);
+                Shader.SetGlobalVector("_CityFailureWave", new Vector4(failureStart, failureWaveSpeed, failureWaveWidth, 0f));
+                Shader.SetGlobalFloat("_CityFailureActive", 1f);
+            }
+            if (playFeedback) GameManager.Instance?.PlayCityEchoSound();
         }
 
         private void BeginWave(Vector3 position, Color color, float speedOverride = 0f, int perspective = 4)
         {
+            GameManager.Instance?.PlayCityEchoSound();
             activeWaveSpeed = Mathf.Max(1f, speedOverride > 0f ? speedOverride : pulseSpeed);
             origin = position;
             elapsed = 0f;
@@ -223,20 +260,20 @@ namespace AnEchoHasNoShape.Echolocation
             if (player != null && outerBounds != null && outerBounds.enabled)
             {
                 bool inside = (outerBounds.ClosestPoint(player.position) - player.position).sqrMagnitude < 0.0001f;
-                if (wasInside && !inside && !completed) BeginFailure();
+                if (wasInside && !inside && !completed) BeginFailure(playFeedback: false);
                 wasInside = inside;
             }
             if (surfaces == null || (!waving && !failing)) return;
             elapsed += Time.deltaTime;
             if (failing)
             {
-                float fade = 1f - Mathf.SmoothStep(0f, 1f, (Time.time - failureStart) / failureFadeDuration);
+                float fade = spatialFailure ? 1f : FailureVisibilityAt(transform.position);
                 Shader.SetGlobalFloat("_CitySequenceVisibility", fade);
-                if (fade <= 0f)
+                if (spatialFailure ? Time.time - failureStart >= failureWaveDuration : fade <= 0f)
                 {
                     failing = false;
                     waveCount = 0;
-                    Shader.SetGlobalInt("_CityWaveCount", 0);
+                    ResetShaderState();
                 }
             }
             if (waving && elapsed >= waveDuration)
@@ -258,6 +295,86 @@ namespace AnEchoHasNoShape.Echolocation
         private void OnDisable()
         {
             ResetShaderState();
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.SetCityFogBlend(default, 0f);
+                GameManager.Instance.SetCityAmbienceWeights(Vector3.zero);
+            }
+        }
+
+        private void LateUpdate()
+        {
+            GameManager manager = GameManager.Instance;
+            if (manager == null) return;
+            float areaBlend = 0f;
+            if (player != null && BoundsActive(outerBounds) && BoundsActive(innerBounds))
+            {
+                Vector3 position = player.position;
+                float outerMargin = InteriorMargin(outerBounds, position);
+                if (outerMargin > 0f)
+                {
+                    float innerDistance = Vector3.Distance(position, innerBounds.ClosestPoint(position));
+                    areaBlend = innerDistance <= 0.0001f ? 1f : outerMargin / (outerMargin + innerDistance);
+                }
+            }
+
+            // Match the echo reaching the player, not merely the interaction time.
+            GameManager.CityFogPreset neutral = manager.GetCityFogPreset(0);
+            GameManager.CityFogPreset current = neutral;
+            Vector3 ambience = Vector3.zero;
+            if (player != null)
+                for (int i = 0; i < waveCount; i++)
+                {
+                    float radius = Mathf.Max(0f, Time.time - waveOrigins[i].w) * waveSettings[i].x;
+                    float behind = radius - Vector3.Distance(player.position, (Vector3)waveOrigins[i]);
+                    float arrived = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(behind / waveSettings[i].z));
+                    current = BlendFog(current, manager.GetCityFogPreset(Mathf.RoundToInt(waveSettings[i].w)), arrived);
+                    int perspective = Mathf.RoundToInt(waveSettings[i].w);
+                    Vector3 target = perspective == 1 ? Vector3.right : perspective == 2 ? Vector3.up
+                        : perspective == 3 ? Vector3.forward : Vector3.zero;
+                    ambience = Vector3.Lerp(ambience, target, arrived);
+                }
+            if (failing)
+                current = BlendFog(current, neutral, 1f - FailureVisibilityAt(player != null ? player.position : transform.position));
+            manager.SetCityFogBlend(current, areaBlend);
+            if (failing) ambience *= FailureVisibilityAt(player != null ? player.position : transform.position);
+            manager.SetCityAmbienceWeights(ambience);
+        }
+
+        private static GameManager.CityFogPreset BlendFog(GameManager.CityFogPreset a, GameManager.CityFogPreset b, float t)
+        {
+            return new GameManager.CityFogPreset(Color.Lerp(a.color, b.color, t),
+                Mathf.Lerp(a.ambientLightScale, b.ambientLightScale, t));
+        }
+
+        private static bool BoundsActive(Collider volume)
+        {
+            return volume != null && volume.enabled && volume.gameObject.activeInHierarchy;
+        }
+
+        private static float InteriorMargin(Collider volume, Vector3 position)
+        {
+            if ((volume.ClosestPoint(position) - position).sqrMagnitude > 0.00000001f) return 0f;
+            if (volume is SphereCollider sphere)
+            {
+                Vector3 scale = sphere.transform.lossyScale;
+                float radius = sphere.radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.y), Mathf.Abs(scale.z));
+                return Mathf.Max(0f, radius - Vector3.Distance(position, sphere.transform.TransformPoint(sphere.center)));
+            }
+            if (volume is BoxCollider box)
+            {
+                Vector3 local = box.transform.InverseTransformPoint(position) - box.center;
+                Vector3 half = box.size * 0.5f;
+                Vector3 scale = box.transform.lossyScale;
+                return Mathf.Max(0f, Mathf.Min((half.x - Mathf.Abs(local.x)) * Mathf.Abs(scale.x),
+                    (half.y - Mathf.Abs(local.y)) * Mathf.Abs(scale.y),
+                    (half.z - Mathf.Abs(local.z)) * Mathf.Abs(scale.z)));
+            }
+            // Conservative fallback for other volume shapes.
+            Bounds bounds = volume.bounds;
+            Vector3 offset = position - bounds.center;
+            return Mathf.Max(0f, Mathf.Min(bounds.extents.x - Mathf.Abs(offset.x),
+                bounds.extents.y - Mathf.Abs(offset.y), bounds.extents.z - Mathf.Abs(offset.z)));
         }
 
         private void OnDestroy()
@@ -277,7 +394,16 @@ namespace AnEchoHasNoShape.Echolocation
                 float target = perspective == 0 || Mathf.RoundToInt(waveSettings[i].w) == perspective || waveSettings[i].w > 3.5f ? 1f : 0f;
                 amount = Mathf.Lerp(amount, target, arrived);
             }
-            return amount * (failing ? 1f - Mathf.SmoothStep(0f, 1f, (Time.time - failureStart) / failureFadeDuration) : 1f);
+            return amount * FailureVisibilityAt(position);
+        }
+
+        private float FailureVisibilityAt(Vector3 position)
+        {
+            if (!failing) return 1f;
+            float progress = spatialFailure
+                ? ((Time.time - failureStart) * failureWaveSpeed - Vector3.Distance(position, failureOrigin)) / Mathf.Max(0.1f, failureWaveWidth)
+                : (Time.time - failureStart) / Mathf.Max(0.1f, failureFadeDuration);
+            return 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(progress));
         }
     }
 }

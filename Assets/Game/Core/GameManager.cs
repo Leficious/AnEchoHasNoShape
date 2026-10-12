@@ -17,7 +17,8 @@ namespace AnEchoHasNoShape
             GlacierMid = 2,
             GlacierEnd = 3,
             CityMainEntrance = 4,
-            GlacierCity = 5
+            GlacierCity = 5,
+            WoodsEnd = 6
         }
 
         public enum PlayerCheckpoint
@@ -28,7 +29,8 @@ namespace AnEchoHasNoShape
             GlacierEnd,
             CityMainEntrance,
             GlacierCity,
-            GlacierMonument
+            GlacierMonument,
+            WoodsEnd
         }
 
         public static GameManager Instance { get; private set; }
@@ -52,6 +54,212 @@ namespace AnEchoHasNoShape
 
         [Tooltip("AERO fog tint used at full strength inside GlacierAreaInner.")]
         [SerializeField] private Color glacierFogColor = new Color(0.62f, 0.78f, 0.9f, 1f);
+
+        [Tooltip("Override the fog's ambient brightness inside the glacier, without changing scene mesh lighting.")]
+        [SerializeField] private bool overrideGlacierFogAmbientLight;
+        [Tooltip("Fog Ambient Light Scale at full glacier blend. Outside the glacier the material's original value is restored.")]
+        [SerializeField, Min(0f)] private float glacierFogAmbientLightScale = 1f;
+
+        [System.Serializable]
+        public struct CityFogPreset
+        {
+            public Color color;
+            [Min(0f)] public float ambientLightScale;
+            public CityFogPreset(Color tint, float ambient) { color = tint; ambientLightScale = ambient; }
+        }
+
+        [Header("Unremembered City Fog")]
+        [SerializeField] private CityFogPreset cityDefaultFog = new CityFogPreset(new Color(0.51f, 0.62f, 0.63f), 1f);
+        [SerializeField] private CityFogPreset cityMuseFog = new CityFogPreset(new Color(0.45f, 0.65f, 0.8f), 1f);
+        [SerializeField] private CityFogPreset cityRulerFog = new CityFogPreset(new Color(0.65f, 0.4f, 0.38f), 1f);
+        [SerializeField] private CityFogPreset cityArchitectFog = new CityFogPreset(new Color(0.4f, 0.65f, 0.48f), 1f);
+        [SerializeField] private CityFogPreset cityGoldFog = new CityFogPreset(new Color(0.8f, 0.7f, 0.4f), 1f);
+        private CityFogPreset activeCityFog;
+        private float cityFogBlend;
+
+        public CityFogPreset GetCityFogPreset(int perspective)
+        {
+            switch (perspective)
+            {
+                case 1: return cityMuseFog;
+                case 2: return cityRulerFog;
+                case 3: return cityArchitectFog;
+                case 4: return cityGoldFog;
+                default: return cityDefaultFog;
+            }
+        }
+
+        public void SetCityFogBlend(CityFogPreset preset, float blend)
+        {
+            activeCityFog = preset;
+            cityFogBlend = Mathf.Clamp01(blend);
+            ApplyFogColor();
+        }
+
+        [Header("Illusory Woods Fog")]
+        [SerializeField] private Color woodsFogColor = new Color(0.4f, 0.55f, 0.48f, 1f);
+        [SerializeField] private bool overrideWoodsFogAmbientLight;
+        [Tooltip("Fog-only ambient brightness inside either woods inner bound. Outside the woods, normal regional lighting is restored.")]
+        [SerializeField, Min(0f)] private float woodsFogAmbientLightScale = 1f;
+        private readonly System.Collections.Generic.List<(BoxCollider outer, BoxCollider inner)> woodsFogAreas = new();
+        private Transform woodsFogPlayer;
+        private float woodsFogBlend;
+
+        [System.Serializable]
+        private sealed class RegionSoundtrack
+        {
+            public AudioClip clip;
+            [Range(0f, 1f)] public float volume = 0.5f;
+            [System.NonSerialized] public AudioSource source;
+            [System.NonSerialized] public float weight;
+        }
+
+        [Header("Looping Region Soundtracks")]
+        [SerializeField] private RegionSoundtrack defaultSoundtrack = new RegionSoundtrack();
+        [SerializeField] private RegionSoundtrack glacierSoundtrack = new RegionSoundtrack();
+        [SerializeField] private RegionSoundtrack citySoundtrack = new RegionSoundtrack();
+        [SerializeField] private RegionSoundtrack woodsSoundtrack = new RegionSoundtrack();
+        [Header("City Character Ambience")]
+        [SerializeField] private RegionSoundtrack museAmbience = new RegionSoundtrack();
+        [SerializeField] private RegionSoundtrack rulerAmbience = new RegionSoundtrack();
+        [SerializeField] private RegionSoundtrack architectAmbience = new RegionSoundtrack();
+        private Vector3 cityAmbienceWeights;
+        private AudioSource cityEchoAudio;
+
+        [Header("City Phase Camera Rumble")]
+        [SerializeField] private bool enableCityRumble = true;
+        [SerializeField, Min(0.1f)] private float cityRumbleDuration = 8f;
+        [SerializeField, Range(0f, 2f)] private float cityRumbleAngle = 0.22f;
+        [SerializeField, Min(0.1f)] private float cityRumbleFrequency = 7f;
+        private float cityRumbleElapsed = float.PositiveInfinity;
+        private Transform cityRumbleCamera;
+        private Quaternion rumbleBaseRotation, rumbleAppliedRotation;
+        private bool rumbleApplied;
+
+        private void RemoveCityRumble()
+        {
+            // Restore only our own contribution; don't overwrite another system
+            // if it has since taken control (for example drowning or teleporting).
+            if (rumbleApplied && cityRumbleCamera != null &&
+                Quaternion.Angle(cityRumbleCamera.localRotation, rumbleAppliedRotation) < 0.001f)
+                cityRumbleCamera.localRotation = rumbleBaseRotation;
+            rumbleApplied = false;
+        }
+
+        private void ApplyCityRumble()
+        {
+            if (!enableCityRumble || cityRumbleElapsed >= cityRumbleDuration || Time.timeScale <= 0f) return;
+            if (cityRumbleCamera == null)
+            {
+                FirstPersonController controller = FindAnyObjectByType<FirstPersonController>();
+                if (controller != null && controller.playerCamera != null) cityRumbleCamera = controller.playerCamera.transform;
+            }
+            cityRumbleElapsed += Time.deltaTime;
+            if (cityRumbleCamera == null) return;
+            float progress = Mathf.Clamp01(cityRumbleElapsed / Mathf.Max(0.1f, cityRumbleDuration));
+            float envelope = Mathf.SmoothStep(0f, 1f, progress / 0.2f)
+                * (1f - Mathf.SmoothStep(0f, 1f, (progress - 0.65f) / 0.35f));
+            float t = Time.time * cityRumbleFrequency;
+            Vector3 angles = new Vector3(Mathf.PerlinNoise(t, 13.7f) - 0.5f,
+                Mathf.PerlinNoise(29.1f, t) - 0.5f, (Mathf.PerlinNoise(t, 47.3f) - 0.5f) * 0.5f);
+            rumbleBaseRotation = cityRumbleCamera.localRotation;
+            rumbleAppliedRotation = rumbleBaseRotation * Quaternion.Euler(angles * (2f * cityRumbleAngle * envelope));
+            cityRumbleCamera.localRotation = rumbleAppliedRotation;
+            rumbleApplied = true;
+        }
+
+        private void OnDisable()
+        {
+            RemoveCityRumble();
+            cityRumbleElapsed = float.PositiveInfinity;
+        }
+
+        public void SetCityAmbienceWeights(Vector3 weights)
+        {
+            cityAmbienceWeights = weights;
+        }
+
+        public void PlayCityEchoSound()
+        {
+            // Restart, never stack multiple camera offsets on rapid phase changes.
+            cityRumbleElapsed = 0f;
+            var library = AnEchoHasNoShape.Core.GameAudioLibrary.Load();
+            if (library == null || library.CityEchoClip == null) return;
+            if (cityEchoAudio == null)
+            {
+                GameObject audioObject = new GameObject("City Echo Audio (Runtime)");
+                audioObject.transform.SetParent(transform, false);
+                cityEchoAudio = audioObject.AddComponent<AudioSource>();
+                cityEchoAudio.playOnAwake = false;
+                cityEchoAudio.spatialBlend = 0f;
+            }
+            cityEchoAudio.Stop();
+            cityEchoAudio.PlayOneShot(library.CityEchoClip, library.CityEchoVolume);
+        }
+        [Tooltip("Additional smoothing for teleports and sudden region changes. Normal fades follow the inner/outer bounds.")]
+        [SerializeField, Min(0.01f)] private float soundtrackBlendSeconds = 1f;
+
+        private void UpdateRegionSoundtracks()
+        {
+            // Empty regional slots leave the default playing. Normalise overlapping
+            // zones so their combined weight never exceeds one.
+            float glacier = glacierSoundtrack.clip != null ? Mathf.Clamp01(fogColorBlendAmount) : 0f;
+            float city = citySoundtrack.clip != null ? Mathf.Clamp01(cityFogBlend) : 0f;
+            float woods = woodsSoundtrack.clip != null ? Mathf.Clamp01(woodsFogBlend) : 0f;
+            float outside = 1f - Mathf.Max(glacier, city, woods);
+            float total = Mathf.Max(1f, outside + glacier + city + woods);
+            UpdateSoundtrack(defaultSoundtrack, "Default Soundtrack", outside / total);
+            UpdateSoundtrack(glacierSoundtrack, "Glacial Ocean Soundtrack", glacier / total);
+            UpdateSoundtrack(citySoundtrack, "Unremembered City Soundtrack", city / total);
+            UpdateSoundtrack(woodsSoundtrack, "Illusory Woods Soundtrack", woods / total);
+            UpdateSoundtrack(museAmbience, "Muse Ambience", Mathf.Clamp01(cityAmbienceWeights.x) * cityFogBlend);
+            UpdateSoundtrack(rulerAmbience, "Ruler Ambience", Mathf.Clamp01(cityAmbienceWeights.y) * cityFogBlend);
+            UpdateSoundtrack(architectAmbience, "Architect Ambience", Mathf.Clamp01(cityAmbienceWeights.z) * cityFogBlend);
+        }
+
+        private void UpdateSoundtrack(RegionSoundtrack track, string label, float target)
+        {
+            if (track.source == null)
+            {
+                GameObject audioObject = new GameObject(label + " (Runtime)");
+                audioObject.transform.SetParent(transform, false);
+                track.source = audioObject.AddComponent<AudioSource>();
+                track.source.playOnAwake = false;
+                track.source.loop = true;
+                track.source.spatialBlend = 0f;
+                track.source.volume = 0f;
+            }
+            if (track.source.clip != track.clip)
+            {
+                track.source.Stop();
+                track.source.clip = track.clip;
+                if (track.clip != null) track.source.Play();
+            }
+            float smoothing = 1f - Mathf.Exp(-Time.unscaledDeltaTime / Mathf.Max(0.01f, soundtrackBlendSeconds));
+            track.weight = Mathf.Lerp(track.weight, target, smoothing);
+            track.source.volume = Mathf.Clamp01(track.volume) * track.weight;
+        }
+
+        [Header("Region Titles")]
+        [SerializeField, Min(0.1f)] private float regionTitleFadeIn = 1.2f;
+        [SerializeField, Min(0f)] private float regionTitleHold = 3f;
+        [SerializeField, Min(0.1f)] private float regionTitleFadeOut = 1.5f;
+        private sealed class TitleRegion
+        {
+            public string title;
+            public readonly System.Collections.Generic.List<Collider> inner = new();
+            public readonly System.Collections.Generic.List<Collider> outer = new();
+            public bool announced;
+        }
+        private readonly TitleRegion[] titleRegions = {
+            new TitleRegion { title = "Glacial Ocean" },
+            new TitleRegion { title = "Unremembered City" },
+            new TitleRegion { title = "Illusory Woods" }
+        };
+        private Transform regionTitlePlayer;
+        private Text regionTitleText;
+        private CanvasGroup regionTitleGroup;
+        private Coroutine regionTitleRoutine;
 
         [Header("Player Progression")]
         [Tooltip("Useful for testing later sections. Leave disabled for the intended opening.")]
@@ -87,11 +295,16 @@ namespace AnEchoHasNoShape
         [SerializeField] private Transform glacierEndSpawn;
         [Tooltip("Optional city entrance spawn. If empty, CityMainEntrance is used.")]
         [SerializeField] private Transform cityMainEntranceSpawn;
+        [Tooltip("Optional woods-end spawn. If empty, WoodsEnd is used.")]
+        [SerializeField] private Transform woodsEndSpawn;
 
         private const string VolumetricFogResourcePath = "Rendering/AERO Basic Fog";
         private const float VolumetricDensityScale = 1f;
         private const float EditingFogDensity = 0f;
         private static readonly int FogColourId = Shader.PropertyToID("_Colour");
+        private static readonly int FogAmbientScaleId = Shader.PropertyToID("_Ambient_Light_Scale");
+        private float defaultFogAmbientScale;
+        private bool hasDefaultFogAmbientScale;
 
         private Material volumetricFogMaterial;
         private Color defaultFogColor;
@@ -126,6 +339,8 @@ namespace AnEchoHasNoShape
             }
 
             Instance = this;
+            InstallRegionTitles();
+            InstallWoodsFogAreas();
             currentCheckpoint = PlayerCheckpoint.Monument;
             EnsureEchoIgnored("GlacierAreaOuter");
             EnsureEchoIgnored("GlacierAreaInner");
@@ -140,6 +355,158 @@ namespace AnEchoHasNoShape
             {
                 gameObject.AddComponent<RuntimeDebugConsole>();
             }
+        }
+
+        private void InstallRegionTitles()
+        {
+            foreach (Collider volume in FindObjectsByType<Collider>(FindObjectsInactive.Include))
+            {
+                string name = volume.name.ToLowerInvariant();
+                if (name == "glacierareainner" || name.StartsWith("glacierareainner (")) titleRegions[0].inner.Add(volume);
+                if (name == "glacierareaouter" || name.StartsWith("glacierareaouter (")) titleRegions[0].outer.Add(volume);
+                if (name == "cityinner" || name == "cityinnerbounds") titleRegions[1].inner.Add(volume);
+                if (name == "cityouterbounds") titleRegions[1].outer.Add(volume);
+                if (name.StartsWith("woodsinnerbounds")) titleRegions[2].inner.Add(volume);
+                if (name.StartsWith("woodsoutterbounds") || name.StartsWith("woodsouterbounds")) titleRegions[2].outer.Add(volume);
+            }
+        }
+
+        private static bool InsideTitleVolumes(System.Collections.Generic.List<Collider> volumes, Vector3 position)
+        {
+            foreach (Collider volume in volumes)
+                if (volume != null && volume.enabled && volume.gameObject.activeInHierarchy &&
+                    (volume.ClosestPoint(position) - position).sqrMagnitude < 0.000001f) return true;
+            return false;
+        }
+
+        private void Update()
+        {
+            if (Instance != this) return;
+            RemoveCityRumble();
+            UpdateRegionSoundtracks();
+            if (regionTitlePlayer == null)
+            {
+                FirstPersonController controller = FindAnyObjectByType<FirstPersonController>();
+                if (controller != null) regionTitlePlayer = controller.transform;
+            }
+            if (regionTitlePlayer == null) return;
+            foreach (TitleRegion region in titleRegions)
+            {
+                bool inside = InsideTitleVolumes(region.inner, regionTitlePlayer.position);
+                // Rearm only after leaving the whole region, not at an inner seam.
+                if (!inside && !InsideTitleVolumes(region.outer, regionTitlePlayer.position)) region.announced = false;
+                if (!inside || region.announced) continue;
+                region.announced = true;
+                if (regionTitleRoutine != null) StopCoroutine(regionTitleRoutine);
+                regionTitleRoutine = StartCoroutine(ShowRegionTitle(region.title));
+            }
+        }
+
+        private IEnumerator ShowRegionTitle(string title)
+        {
+            if (regionTitleGroup == null)
+            {
+                GameObject root = new GameObject("Region Title (Runtime)", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(CanvasGroup));
+                root.transform.SetParent(transform, false);
+                Canvas canvas = root.GetComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.sortingOrder = 20;
+                CanvasScaler scaler = root.GetComponent<CanvasScaler>();
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                scaler.referenceResolution = new Vector2(1920f, 1080f);
+                scaler.matchWidthOrHeight = 0.5f;
+                regionTitleGroup = root.GetComponent<CanvasGroup>();
+                regionTitleGroup.blocksRaycasts = regionTitleGroup.interactable = false;
+                GameObject label = new GameObject("Location", typeof(RectTransform), typeof(Text), typeof(Shadow));
+                label.transform.SetParent(root.transform, false);
+                RectTransform rect = label.GetComponent<RectTransform>();
+                rect.anchorMin = new Vector2(0.1f, 1f);
+                rect.anchorMax = new Vector2(0.9f, 1f);
+                rect.pivot = new Vector2(0.5f, 1f);
+                rect.anchoredPosition = new Vector2(0f, -100f);
+                rect.sizeDelta = new Vector2(0f, 80f);
+                regionTitleText = label.GetComponent<Text>();
+                regionTitleText.font = HeaderFont != null ? HeaderFont : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                regionTitleText.fontSize = 38;
+                regionTitleText.alignment = TextAnchor.MiddleCenter;
+                regionTitleText.color = new Color(0.94f, 0.94f, 0.88f);
+                regionTitleText.raycastTarget = false;
+                label.GetComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.6f);
+            }
+            regionTitleGroup.alpha = 0f;
+            regionTitleText.text = title;
+            float fadeIn = Mathf.Max(0.1f, regionTitleFadeIn);
+            float hold = Mathf.Max(0f, regionTitleHold);
+            float fadeOut = Mathf.Max(0.1f, regionTitleFadeOut);
+            for (float elapsed = 0f; elapsed < fadeIn + hold + fadeOut; elapsed += Time.deltaTime)
+            {
+                regionTitleGroup.alpha = elapsed < fadeIn ? Mathf.SmoothStep(0f, 1f, elapsed / fadeIn)
+                    : 1f - Mathf.SmoothStep(0f, 1f, (elapsed - fadeIn - hold) / fadeOut);
+                yield return null;
+            }
+            regionTitleGroup.alpha = 0f;
+            regionTitleRoutine = null;
+        }
+
+        private void InstallWoodsFogAreas()
+        {
+            BoxCollider[] boxes = FindObjectsByType<BoxCollider>(FindObjectsInactive.Include);
+            foreach (BoxCollider outer in boxes)
+            {
+                string prefix = outer.name.StartsWith("WoodsOutterBounds", System.StringComparison.OrdinalIgnoreCase)
+                    ? "WoodsOutterBounds" : "WoodsOuterBounds";
+                if (!outer.name.StartsWith(prefix, System.StringComparison.OrdinalIgnoreCase)) continue;
+                string innerName = "WoodsInnerBounds" + outer.name.Substring(prefix.Length);
+                BoxCollider inner = System.Array.Find(boxes, box => box.name.Equals(innerName, System.StringComparison.OrdinalIgnoreCase));
+                PrepareWoodsFogVolume(outer);
+                if (inner == null)
+                {
+                    Debug.LogWarning($"Woods fog is missing {innerName}.", outer);
+                    continue;
+                }
+                PrepareWoodsFogVolume(inner);
+                woodsFogAreas.Add((outer, inner));
+            }
+        }
+
+        private static void PrepareWoodsFogVolume(BoxCollider volume)
+        {
+            volume.isTrigger = true;
+            if (volume.GetComponent<EchoRenderingExclusion>() == null)
+                volume.gameObject.AddComponent<EchoRenderingExclusion>();
+            foreach (EchoReactiveSurface surface in volume.GetComponentsInChildren<EchoReactiveSurface>(true))
+                Destroy(surface);
+            foreach (Renderer renderer in volume.GetComponentsInChildren<Renderer>(true))
+                renderer.enabled = false;
+        }
+
+        private void LateUpdate()
+        {
+            if (Instance == this) ApplyCityRumble();
+            if (Instance != this || woodsFogAreas.Count == 0) return;
+            if (woodsFogPlayer == null)
+            {
+                FirstPersonController controller = FindAnyObjectByType<FirstPersonController>();
+                if (controller != null) woodsFogPlayer = controller.transform;
+            }
+            float blend = 0f;
+            if (woodsFogPlayer != null)
+                foreach (var pair in woodsFogAreas)
+                {
+                    if (pair.outer == null || pair.inner == null || !pair.outer.enabled || !pair.inner.enabled ||
+                        !pair.outer.gameObject.activeInHierarchy || !pair.inner.gameObject.activeInHierarchy) continue;
+                    Vector3 local = pair.outer.transform.InverseTransformPoint(woodsFogPlayer.position) - pair.outer.center;
+                    Vector3 half = pair.outer.size * 0.5f;
+                    Vector3 scale = pair.outer.transform.lossyScale;
+                    float margin = Mathf.Min((half.x - Mathf.Abs(local.x)) * Mathf.Abs(scale.x),
+                        (half.y - Mathf.Abs(local.y)) * Mathf.Abs(scale.y),
+                        (half.z - Mathf.Abs(local.z)) * Mathf.Abs(scale.z));
+                    if (margin <= 0f) continue;
+                    float distance = Vector3.Distance(woodsFogPlayer.position, pair.inner.ClosestPoint(woodsFogPlayer.position));
+                    blend = Mathf.Max(blend, margin / (margin + distance));
+                }
+            woodsFogBlend = Mathf.SmoothStep(0f, 1f, blend);
+            ApplyFogColor();
         }
 
         public void UnlockEcho()
@@ -169,6 +536,10 @@ namespace AnEchoHasNoShape
             Transform destination;
             switch (initialSpawnPoint)
             {
+                case DevelopmentSpawnPoint.WoodsEnd:
+                    SetCheckpoint(PlayerCheckpoint.WoodsEnd);
+                    destination = GetCurrentCheckpointTransform();
+                    break;
                 case DevelopmentSpawnPoint.CityMainEntrance:
                     SetCheckpoint(PlayerCheckpoint.CityMainEntrance);
                     destination = GetCurrentCheckpointTransform();
@@ -219,6 +590,9 @@ namespace AnEchoHasNoShape
 
         public Transform GetPointOfInterest(string pointName)
         {
+            if (string.Equals(pointName, "woodsend", System.StringComparison.OrdinalIgnoreCase))
+                return ResolveCheckpoint(PlayerCheckpoint.WoodsEnd);
+
             if (string.Equals(pointName, "citymainentrance", System.StringComparison.OrdinalIgnoreCase))
             {
                 return ResolveCheckpoint(PlayerCheckpoint.CityMainEntrance);
@@ -412,6 +786,7 @@ namespace AnEchoHasNoShape
             return checkpoint switch
             {
                 PlayerCheckpoint.CityMainEntrance => ResolveTransform(cityMainEntranceSpawn, "CityMainEntrance"),
+                PlayerCheckpoint.WoodsEnd => ResolveTransform(woodsEndSpawn, "WoodsEnd"),
                 PlayerCheckpoint.GlacierStart => ResolveTransform(
                     glacierMonumentSpawn, "GlacierRespawnMonument", "GlacierRespawnStart", "GlacierRespawn"),
                 PlayerCheckpoint.GlacierCity => ResolveTransform(glacierCitySpawn, "GlacierRespawnCity"),
@@ -501,6 +876,11 @@ namespace AnEchoHasNoShape
             }
 
             defaultFogColor = volumetricFogMaterial.GetColor(FogColourId);
+            if (volumetricFogMaterial.HasProperty(FogAmbientScaleId))
+            {
+                defaultFogAmbientScale = volumetricFogMaterial.GetFloat(FogAmbientScaleId);
+                hasDefaultFogAmbientScale = true;
+            }
             fogBlendTarget = defaultFogColor;
             hasDefaultFogColor = true;
         }
@@ -513,7 +893,19 @@ namespace AnEchoHasNoShape
             }
 
             Color activeColor = Color.Lerp(defaultFogColor, fogBlendTarget, fogColorBlendAmount);
+            activeColor = Color.Lerp(activeColor, activeCityFog.color, cityFogBlend);
+            activeColor = Color.Lerp(activeColor, woodsFogColor, woodsFogBlend);
             volumetricFogMaterial.SetColor(FogColourId, activeColor);
+            if (hasDefaultFogAmbientScale)
+            {
+                float ambientTarget = overrideGlacierFogAmbientLight
+                    ? Mathf.Max(0f, glacierFogAmbientLightScale) : defaultFogAmbientScale;
+                float ambient = Mathf.Lerp(defaultFogAmbientScale, ambientTarget, fogColorBlendAmount);
+                ambient = Mathf.Lerp(ambient, Mathf.Max(0f, activeCityFog.ambientLightScale), cityFogBlend);
+                if (overrideWoodsFogAmbientLight)
+                    ambient = Mathf.Lerp(ambient, Mathf.Max(0f, woodsFogAmbientLightScale), woodsFogBlend);
+                volumetricFogMaterial.SetFloat(FogAmbientScaleId, ambient);
+            }
         }
 
         private void OnValidate()
@@ -540,6 +932,8 @@ namespace AnEchoHasNoShape
                     // Resources.Load returns the shared material asset. Restore its
                     // editing state so Scene view stays clear after Play Mode ends.
                     volumetricFogMaterial.SetFloat("_Density", EditingFogDensity);
+                    if (hasDefaultFogAmbientScale)
+                        volumetricFogMaterial.SetFloat(FogAmbientScaleId, defaultFogAmbientScale);
                     if (hasDefaultFogColor)
                     {
                         volumetricFogMaterial.SetColor(FogColourId, defaultFogColor);

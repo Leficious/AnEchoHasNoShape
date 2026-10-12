@@ -32,6 +32,32 @@ namespace AnEchoHasNoShape.Echolocation
 
         public IcebergEchoState State => state;
         private bool setupPending;
+        public static bool GlacierCompleted { get; private set; }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetCompletion()
+        {
+            GlacierCompleted = false;
+            Shader.SetGlobalFloat("_GlacierCompletionActive", 0f);
+        }
+
+        public static void CompleteGlacier(bool animate)
+        {
+            if (GlacierCompleted) return;
+            GlacierCompleted = true;
+            WorldReverberationController world = WorldReverberationController.Instance;
+            Vector3 origin = world != null ? world.transform.position : Vector3.zero;
+            Shader.SetGlobalVector("_GlacierCompletionOrigin", origin);
+            Shader.SetGlobalVector("_GlacierCompletionWave", new Vector4(Time.time,
+                world != null ? world.PulseSpeed : 52f, animate ? 0f : 1f, 0f));
+            Shader.SetGlobalColor("_GlacierCompletionColor", world != null ? world.ReverberationColor : new Color(1f, 0.66f, 0.2f));
+            Shader.SetGlobalFloat("_GlacierCompletionActive", 1f);
+            foreach (IcebergStateGroup group in FindObjectsByType<IcebergStateGroup>(FindObjectsInactive.Include))
+                foreach (EchoReactiveSurface surface in group.GetComponentsInChildren<EchoReactiveSurface>(true))
+                    surface.EnableGlacierCompletion();
+            foreach (SirenEchoZone siren in FindObjectsByType<SirenEchoZone>(FindObjectsInactive.Include))
+                siren.SilenceAfterCompletion();
+        }
 
         public void Configure(IcebergEchoState newState)
         {

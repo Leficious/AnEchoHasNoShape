@@ -196,6 +196,7 @@ namespace AnEchoHasNoShape.Echolocation
             pulseToken = BeginSharedPulse(pulseOrigin, range);
             nextAvailableTime = Time.time + cooldown;
             PublishPulse();
+            WoodsEchoResponse.Instance?.OnPlayerEcho(pulseOrigin, speed, range, bandWidth, transform);
 
             if (audioSource != null && echoClip != null)
             {

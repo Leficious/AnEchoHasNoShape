@@ -74,6 +74,8 @@ namespace AnEchoHasNoShape.Echolocation
             RegisterOverlaysWithLodGroup();
             RefreshEchoColorOverride();
             RefreshEchoIgnoreState();
+            if (IcebergStateGroup.GlacierCompleted && GetComponentInParent<IcebergStateGroup>() != null)
+                EnableGlacierCompletion();
         }
 
         private void Update()
@@ -136,9 +138,15 @@ namespace AnEchoHasNoShape.Echolocation
 
         public void RefreshEchoIgnoreState()
         {
+            bool illusion = WoodsIllusionTree.IsIllusion(transform);
+            ApplyFloat(ringMaterials, Shader.PropertyToID("_WoodsIllusion"), illusion ? 1f : 0f);
+            ApplyFloat(outlineMaterials, Shader.PropertyToID("_WoodsIllusion"), illusion ? 1f : 0f);
             float playerEchoMask = IgnoreEcholocation.IsIgnored(transform) ? 0f : 1f;
             ApplyFloat(ringMaterials, PlayerEchoMaskId, playerEchoMask);
             ApplyFloat(outlineMaterials, PlayerEchoMaskId, playerEchoMask);
+            float woodsMask = !illusion && playerEchoMask > 0f ? 1f : 0f;
+            ApplyFloat(ringMaterials, Shader.PropertyToID("_WoodsReplyMask"), woodsMask);
+            ApplyFloat(outlineMaterials, Shader.PropertyToID("_WoodsReplyMask"), woodsMask);
         }
 
         /// <summary>
@@ -193,6 +201,12 @@ namespace AnEchoHasNoShape.Echolocation
             ApplyFloat(outlineMaterials, Shader.PropertyToID("_CityRevealAmount"), amount);
             SetCityColor(ringMaterials, color);
             SetCityColor(outlineMaterials, color);
+        }
+
+        public void EnableGlacierCompletion()
+        {
+            ApplyFloat(ringMaterials, Shader.PropertyToID("_GlacierCompletedIceberg"), 1f);
+            ApplyFloat(outlineMaterials, Shader.PropertyToID("_GlacierCompletedIceberg"), 1f);
         }
 
         public void SetCityPerspective(int perspective)

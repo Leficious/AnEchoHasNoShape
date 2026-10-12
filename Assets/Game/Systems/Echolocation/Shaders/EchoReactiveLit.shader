@@ -8,6 +8,9 @@ Shader "An Echo Has No Shape/Echo Reveal Overlay"
         _DiffusionStrength("Surface Diffusion", Range(0, 2)) = 1
         [HideInInspector] _SoftArchitecture("Soft Architecture", Float) = 0
         [HideInInspector] _CityRevealAmount("City Reveal Amount", Float) = 0
+        [HideInInspector] _WoodsReplyMask("Woods Reply Mask", Float) = 1
+        [HideInInspector] _WoodsIllusion("Woods Illusion", Float) = 0
+        [HideInInspector] _GlacierCompletedIceberg("Completed Iceberg", Float) = 0
         [HideInInspector] _CityPerspective("City Perspective", Float) = 0
         [HideInInspector] _CityRevealColor("City Reveal Color", Color) = (1, 1, 1, 1)
         [HideInInspector] _LockCityCharacterColor("Lock Character Color", Float) = 0
@@ -52,6 +55,9 @@ Shader "An Echo Has No Shape/Echo Reveal Overlay"
                 float _Extrusion;
                 float _SoftArchitecture;
                 float _CityRevealAmount;
+                float _WoodsReplyMask;
+                float _WoodsIllusion;
+                float _GlacierCompletedIceberg;
                 float _CityPerspective;
                 half4 _CityRevealColor;
                 float _LockCityCharacterColor;
@@ -77,6 +83,71 @@ Shader "An Echo Has No Shape/Echo Reveal Overlay"
                 float _EchoOpacity;
                 float _Cull;
             CBUFFER_END
+            float _WoodsCompletionActive;
+            float3 _WoodsCompletionOrigin;
+            float4 _WoodsCompletionWave;
+
+            float _WoodsReplyActive;
+            float3 _WoodsReplyOrigin;
+            float4 _WoodsReplySettings;
+            float _WoodsReplyFade;
+            float4 _WoodsReplyStyle; // Width, trail length, intensity, ring count.
+            float _WoodsReplySpacing;
+            half4 _WoodsReplyColor;
+            int _WoodsOverwriteCount;
+            float4 _WoodsOverwriteOrigins[32];
+            float4 _WoodsOverwriteSettings[32];
+
+            float WoodsReplyAt(float3 positionWS, float diffusion, float outlineMode, out float ownership)
+            {
+                ownership = 0.0;
+                if (_WoodsReplyActive < 0.5) return 0.0;
+                float d = distance(positionWS, _WoodsReplyOrigin);
+                float reply = 0.0;
+                float totalWeight = 0.0;
+                [unroll] for (int ring = 0; ring < 3; ring++)
+                {
+                    float enabled = step(ring + 0.5, _WoodsReplyStyle.w);
+                    float offset = ring == 0 ? 0.0 : (ring == 1 ? _WoodsReplySpacing : _WoodsReplySpacing * 2.35);
+                    float radius = (_Time.y - _WoodsReplySettings.x) * _WoodsReplySettings.y - offset;
+                    float behind = radius - d;
+                    float ringAge = behind / max(1.0, _WoodsReplySettings.y);
+                    float weight = ring == 0 ? 1.0 : (ring == 1 ? 0.20 : 0.12);
+                    float width = _WoodsReplyStyle.x * (ring == 0 ? 1.20 : (ring == 1 ? 0.55 : 0.45));
+                    float diffusedWidth = width * lerp(1.0, 1.85, diffusion);
+                    float core = 1.0 - smoothstep(width * 0.28, diffusedWidth, abs(behind));
+                    float halo = 1.0 - smoothstep(diffusedWidth, diffusedWidth * 1.75, abs(behind));
+                    float front = saturate(core + halo * (ring == 0 ? 0.24 : 0.06) * diffusion);
+                    float trail = step(0.0, behind) * saturate(1.0 - behind / max(_WoodsReplyStyle.y, 0.001));
+                    float moving = front + trail * trail * (ring == 0 ? 0.16 : 0.05);
+                    float held = smoothstep(0.0, 0.3, ringAge) * 0.72;
+                    float fade = 1.0 - smoothstep(_WoodsReplySettings.w,
+                        _WoodsReplySettings.w + max(0.1, _WoodsReplyFade), ringAge);
+                    reply += lerp(moving, held, outlineMode) * weight * enabled * step(0.0, radius) * fade;
+                    totalWeight += weight * enabled;
+                }
+                reply /= lerp(1.0, max(totalWeight, 0.001), outlineMode);
+                reply *= 1.0 - smoothstep(_WoodsReplySettings.z - 5.0, _WoodsReplySettings.z, d);
+                float erased = 0.0;
+                [loop] for (int i = 0; i < _WoodsOverwriteCount; i++)
+                {
+                    float pd = distance(positionWS, _WoodsOverwriteOrigins[i].xyz);
+                    float radius = (_Time.y - _WoodsOverwriteOrigins[i].w) * _WoodsOverwriteSettings[i].x;
+                    float arrival = smoothstep(0.0, _WoodsOverwriteSettings[i].z * 2.0, radius - pd);
+                    erased = max(erased, arrival * (1.0 - smoothstep(_WoodsOverwriteSettings[i].y - 3.0, _WoodsOverwriteSettings[i].y, pd)));
+                }
+                // Even silent illusion trees lose the older player highlight.
+                // A newer player front takes ownership back spatially.
+                float behindReply = (_Time.y - _WoodsReplySettings.x) * _WoodsReplySettings.y - d;
+                ownership = smoothstep(0.0, max(1.0, _WoodsReplyStyle.x * 2.0), behindReply)
+                    * (1.0 - smoothstep(_WoodsReplySettings.z - 5.0, _WoodsReplySettings.z, d)) * (1.0 - erased);
+                return reply * (1.0 - erased) * _WoodsReplyMask;
+            }
+
+            float _GlacierCompletionActive;
+            float3 _GlacierCompletionOrigin;
+            float4 _GlacierCompletionWave;
+            half4 _GlacierCompletionColor;
 
             TEXTURE2D(_EchoAlphaTexture);
             SAMPLER(sampler_EchoAlphaTexture);
@@ -386,6 +457,11 @@ Shader "An Echo Has No Shape/Echo Reveal Overlay"
 
             half4 Frag(Varyings input) : SV_Target
             {
+                if (_WoodsIllusion > 0.5 && _WoodsCompletionActive > 0.5)
+                {
+                    float radius = max(0, _Time.y - _WoodsCompletionWave.x) * _WoodsCompletionWave.y;
+                    clip(distance(input.positionWS, _WoodsCompletionOrigin) - radius - _WoodsCompletionWave.z * 1000000);
+                }
                 half sourceAlpha = SAMPLE_TEXTURE2D(_EchoAlphaTexture, sampler_EchoAlphaTexture, input.uv).a;
                 clip(lerp(1.0h, sourceAlpha - _EchoAlphaCutoff, saturate(_EchoUseAlphaClip)));
 
@@ -403,16 +479,19 @@ Shader "An Echo Has No Shape/Echo Reveal Overlay"
                 float sirenOutlineReveal = CalculateSirenAccumulatedReveal(sirenDistance) * 0.72;
                 half3 sirenOutlineColor = _SirenEchoPulseColor.rgb * sirenOutlineReveal;
                 float outlineMode = step(0.5, _RevealMode);
+                float woodsOwnership;
+                float woodsAmount = WoodsReplyAt(input.positionWS, diffusion, outlineMode, woodsOwnership);
                 half3 playerColor = lerp(movingReveal, outlineColor, outlineMode) * _EchoPulseIntensity;
                 half3 sirenColor = lerp(sirenMovingReveal, sirenOutlineColor, outlineMode) * _SirenEchoPulseIntensity;
                 float sirenOwnership = CalculateSirenOwnership(sirenDistance);
                 playerColor *= 1.0 - sirenOwnership;
+                playerColor *= 1.0 - woodsOwnership;
                 half3 localReveal = (playerColor + sirenColor) * _RevealMultiplier;
                 if (_SoftArchitecture > 0.5 && outlineMode < 0.5)
                 {
                     // Hold a front-facing wall fill after the moving wave has
                     // passed, using exactly the same reveal lifetime as edges.
-                    half3 heldFill = (outlineColor * _EchoPulseIntensity * (1.0 - sirenOwnership)
+                    half3 heldFill = (outlineColor * _EchoPulseIntensity * (1.0 - sirenOwnership) * (1.0 - woodsOwnership)
                         + sirenOutlineColor * _SirenEchoPulseIntensity) * _RevealMultiplier;
                     localReveal = max(localReveal, heldFill);
                 }
@@ -420,6 +499,12 @@ Shader "An Echo Has No Shape/Echo Reveal Overlay"
                 float wireframe = CalculateEchoWireframe(input.positionWS, normalWS);
                 localReveal *= 1.0h + wireframe * _EchoWireframeStrength * _ObjectWireframeMultiplier;
                 half3 worldReveal = CalculateWorldReverberation(input.positionWS) * _RevealMultiplier;
+                float completedRadius = max(0.0, _Time.y - _GlacierCompletionWave.x) * _GlacierCompletionWave.y;
+                float completion = max(_GlacierCompletionWave.z,
+                    smoothstep(0.0, 7.0, completedRadius - distance(input.positionWS, _GlacierCompletionOrigin)))
+                    * _GlacierCompletionActive * _GlacierCompletedIceberg;
+                localReveal *= 1.0 - completion;
+                worldReveal = lerp(worldReveal, _GlacierCompletionColor.rgb * _RevealMultiplier, completion);
 
                 float shimmerPhase = _Time.y * _TimedRevealShimmerSpeed
                     + dot(input.positionWS, float3(0.47, 0.73, 0.31));
@@ -429,6 +514,8 @@ Shader "An Echo Has No Shape/Echo Reveal Overlay"
                     * step(0.5, _UseRevealDurationOverride)
                     * saturate(_TimedRevealAmount);
                 localReveal *= lerp(1.0, shimmerMultiplier, timedOutlineMask);
+                localReveal += _WoodsReplyColor.rgb * woodsAmount * _WoodsReplyStyle.z * _RevealMultiplier
+                    * (1.0 + wireframe * _EchoWireframeStrength * _ObjectWireframeMultiplier);
                 half3 reveal = localReveal + worldReveal;
                 half3 cityColor, cityMoving;
                 float cityAmount;

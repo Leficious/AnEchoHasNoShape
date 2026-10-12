@@ -86,6 +86,7 @@ namespace AnEchoHasNoShape.Echolocation
 
         private void Update()
         {
+            if (IcebergStateGroup.GlacierCompleted) return;
             if (playerColliderCount <= 0)
             {
                 return;
@@ -133,6 +134,7 @@ namespace AnEchoHasNoShape.Echolocation
 
         private void EmitNextSirenEcho()
         {
+            if (IcebergStateGroup.GlacierCompleted) return;
             Transform source = useSourceA ? sourceA : sourceB;
             useSourceA = !useSourceA;
 
@@ -182,6 +184,8 @@ namespace AnEchoHasNoShape.Echolocation
             audioObject.transform.position = position;
 
             AudioSource audioSource = audioObject.AddComponent<AudioSource>();
+            activeSongs.RemoveAll(source => source == null);
+            activeSongs.Add(audioSource);
             audioSource.clip = sirenClip;
             audioSource.volume = sirenVolume;
             audioSource.spatialBlend = 1f;
@@ -196,6 +200,17 @@ namespace AnEchoHasNoShape.Echolocation
             audioSource.PlayOneShot(sirenClip, variedGain);
 
             Destroy(audioObject, sirenClip.length / audioSource.pitch + 0.5f);
+        }
+
+        private readonly System.Collections.Generic.List<AudioSource> activeSongs = new();
+
+        public void SilenceAfterCompletion()
+        {
+            foreach (AudioSource song in activeSongs)
+                if (song != null) song.Stop();
+            activeSongs.Clear();
+            pulseActive = false;
+            EchoPulseController.EndSirenPulse();
         }
 
         private void RandomizeSirenIcebergSelection()

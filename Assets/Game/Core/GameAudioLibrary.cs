@@ -12,6 +12,12 @@ namespace AnEchoHasNoShape.Core
         [SerializeField] private AudioClip echoClip;
         [SerializeField, Range(0f, 1f)] private float echoVolume = .78f;
 
+        [Header("City Echo")]
+        [SerializeField] private AudioClip cityEchoClip;
+        [SerializeField, Range(0f, 1f)] private float cityEchoVolume = .75f;
+        public AudioClip CityEchoClip => cityEchoClip;
+        public float CityEchoVolume => cityEchoVolume;
+
         [Header("Global Ambience")]
         [SerializeField] private AudioClip ambienceClip;
         [SerializeField, Range(0f, 1f)] private float ambienceVolume = .34f;

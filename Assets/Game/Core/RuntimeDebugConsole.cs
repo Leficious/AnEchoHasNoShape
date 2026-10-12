@@ -31,6 +31,7 @@ namespace AnEchoHasNoShape
             "/tp glaciermid",
             "/tp glacierend",
             "/tp citymainentrance",
+            "/tp woodsend",
             "/echo unlock",
             "/tutorial complete",
             "/reverb",
@@ -318,7 +319,7 @@ namespace AnEchoHasNoShape
             switch (parts[0].ToLowerInvariant())
             {
                 case "help":
-                    result = "/tp centermonument | /tp glaciermonument | /tp glaciercity | /tp glaciermid | /tp glacierend | /tp citymainentrance | /god | /player | /fog [on|off] | /echo unlock | /tutorial complete | /reverb | /city <neutral|muse|ruler|architect|reset|gold>";
+                    result = "/tp centermonument | /tp glaciermonument | /tp glaciercity | /tp glaciermid | /tp glacierend | /tp citymainentrance | /tp woodsend | /god | /player | /fog [on|off] | /echo unlock | /tutorial complete | /reverb | /city <neutral|muse|ruler|architect|reset|gold>";
                     break;
                 case "city":
                     if (parts.Length != 2)
@@ -339,7 +340,7 @@ namespace AnEchoHasNoShape
                     result = SetDebugFog(parts);
                     break;
                 case "tp":
-                    result = parts.Length > 1 ? Teleport(parts[1]) : "Usage: /tp <centermonument|glaciermonument|glaciercity|glaciermid|glacierend|citymainentrance>";
+                    result = parts.Length > 1 ? Teleport(parts[1]) : "Usage: /tp <centermonument|glaciermonument|glaciercity|glaciermid|glacierend|citymainentrance|woodsend>";
                     break;
                 case "god":
                     SetGodMode(true);
