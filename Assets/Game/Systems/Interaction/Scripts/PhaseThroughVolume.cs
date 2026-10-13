@@ -215,6 +215,7 @@ namespace AnEchoHasNoShape.Interaction
         private static PhasePassageScreenEffect instance;
 
         private readonly HashSet<Object> activeVolumes = new HashSet<Object>();
+        private readonly HashSet<Object> mufflingVolumes = new HashSet<Object>();
         private AudioLowPassFilter lowPassFilter;
         private bool createdLowPassFilter;
         private bool previousFilterEnabled;
@@ -257,7 +258,8 @@ namespace AnEchoHasNoShape.Interaction
             float distortion,
             float vignette,
             float cutoffFrequency,
-            float dimming = 0f)
+            float dimming = 0f,
+            bool muffleAudio = true)
         {
             PhasePassageScreenEffect effect = GetOrCreate();
             effect.activeVolumes.Add(source);
@@ -271,7 +273,12 @@ namespace AnEchoHasNoShape.Interaction
             effect.vignetteStrength = Mathf.Clamp(vignette, 0f, 3f);
             effect.dimmingStrength = Mathf.Clamp01(dimming);
             effect.ApplyAppearanceGlobals();
-            effect.BeginAudioMuffle();
+            if (muffleAudio)
+            {
+                effect.mufflingVolumes.Add(source);
+                effect.BeginAudioMuffle();
+            }
+            else effect.mufflingVolumes.Remove(source);
         }
 
         public static void Exit(Object source)
@@ -282,6 +289,7 @@ namespace AnEchoHasNoShape.Interaction
             }
 
             instance.activeVolumes.Remove(source);
+            instance.mufflingVolumes.Remove(source);
             if (instance.activeVolumes.Count == 0)
             {
                 instance.targetOpacity = 0f;
@@ -386,7 +394,7 @@ namespace AnEchoHasNoShape.Interaction
                 return;
             }
 
-            float desiredCutoff = activeVolumes.Count > 0
+            float desiredCutoff = mufflingVolumes.Count > 0
                 ? targetCutoffFrequency
                 : previousCutoffFrequency;
             lowPassFilter.cutoffFrequency = Mathf.MoveTowards(
@@ -394,7 +402,7 @@ namespace AnEchoHasNoShape.Interaction
                 desiredCutoff,
                 22000f * normalizedStep);
 
-            if (activeVolumes.Count == 0 && currentOpacity <= 0.001f &&
+            if (mufflingVolumes.Count == 0 &&
                 Mathf.Abs(lowPassFilter.cutoffFrequency - previousCutoffFrequency) < 1f)
             {
                 lowPassFilter.cutoffFrequency = previousCutoffFrequency;

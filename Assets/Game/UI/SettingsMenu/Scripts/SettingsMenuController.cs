@@ -66,6 +66,7 @@ namespace AnEchoHasNoShape.UI
 
         private void Update()
         {
+            if (GoldenGateInteractable.IsEnding) return;
             // The development console owns Escape while it is open. Checking both
             // states keeps this independent of Unity's script execution order:
             // either the console is still open, or it already consumed this frame.

@@ -32,6 +32,7 @@ Shader "An Echo Has No Shape/Echo Reveal Overlay"
         [HideInInspector] _EchoAlphaCutoff("Source Alpha Cutoff", Range(0, 1)) = 0.5
         [HideInInspector] _ObjectWireframeMultiplier("Object Wireframe Multiplier", Range(0, 1)) = 1
         [HideInInspector] _EchoOpacity("Echo Opacity", Range(0, 1)) = 1
+        [HideInInspector] _TerrainTreeEchoDistance("Terrain Tree Draw Distance", Float) = 0
         [HideInInspector] _SrcBlend("Source Blend", Float) = 1
         [HideInInspector] _DstBlend("Destination Blend", Float) = 1
         [Enum(UnityEngine.Rendering.CullMode)] _Cull("Cull", Float) = 2
@@ -81,6 +82,7 @@ Shader "An Echo Has No Shape/Echo Reveal Overlay"
                 float _EchoAlphaCutoff;
                 float _ObjectWireframeMultiplier;
                 float _EchoOpacity;
+                float _TerrainTreeEchoDistance;
                 float _Cull;
             CBUFFER_END
             float _WoodsCompletionActive;
@@ -457,6 +459,14 @@ Shader "An Echo Has No Shape/Echo Reveal Overlay"
 
             half4 Frag(Varyings input) : SV_Target
             {
+                float treeFade = 1.0;
+                if (_TerrainTreeEchoDistance > 0.0)
+                {
+                    float cameraDistance = distance(input.positionWS, _WorldSpaceCameraPos);
+                    clip(_TerrainTreeEchoDistance - cameraDistance);
+                    treeFade = 1.0 - smoothstep(_TerrainTreeEchoDistance * 0.9,
+                        _TerrainTreeEchoDistance, cameraDistance);
+                }
                 if (_WoodsIllusion > 0.5 && _WoodsCompletionActive > 0.5)
                 {
                     float radius = max(0, _Time.y - _WoodsCompletionWave.x) * _WoodsCompletionWave.y;
@@ -554,7 +564,7 @@ Shader "An Echo Has No Shape/Echo Reveal Overlay"
                         : CityCharacterColorAt(input.positionWS, _CityRevealColor.rgb);
                     reveal = brightness * lockedColor;
                 }
-                return half4(reveal * perspectiveMask, perspectiveMask * saturate(max(max(localAlpha, worldAlpha),
+                return half4(reveal * perspectiveMask * treeFade, treeFade * perspectiveMask * saturate(max(max(localAlpha, worldAlpha),
                     max(cityAmount * _SoftArchitecture, max(cityMoving.r, max(cityMoving.g, cityMoving.b)) * _PlayerEchoMask))));
             }
             half4 FragArchitectureDepth(Varyings input) : SV_Target

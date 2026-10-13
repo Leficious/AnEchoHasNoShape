@@ -42,6 +42,11 @@ namespace AnEchoHasNoShape.Interaction
 
         private void Update()
         {
+            if (GoldenGateInteractable.IsEnding)
+            {
+                ClearHover();
+                return;
+            }
             if (InteractionTextPanel.Instance != null && InteractionTextPanel.Instance.IsOpen)
             {
                 ClearHover();
@@ -105,6 +110,11 @@ namespace AnEchoHasNoShape.Interaction
             {
                 if (behaviour is IInteractable interactable)
                 {
+                    if (interactable is IInteractionPrompt custom && !custom.CanInteract)
+                    {
+                        ClearHover();
+                        return;
+                    }
                     EchoInteractionGate gate = behaviour.GetComponentInParent<EchoInteractionGate>(true);
                     if (gate != null && gate.isActiveAndEnabled && !gate.IsInteractionAvailable)
                     {
@@ -141,7 +151,8 @@ namespace AnEchoHasNoShape.Interaction
                 highlightStrength,
                 highlightShimmerSpeed,
                 highlightFadeDuration);
-            ScreenPromptUI.SetInteraction($"Press F to {interactable.InteractionVerb}.");
+            ScreenPromptUI.SetInteraction(interactable is IInteractionPrompt custom
+                ? custom.PromptText : $"Press F to {interactable.InteractionVerb}.");
         }
 
         private void ClearHover()

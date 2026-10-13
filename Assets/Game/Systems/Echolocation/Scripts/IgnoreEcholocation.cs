@@ -14,6 +14,8 @@ namespace AnEchoHasNoShape.Echolocation
         private static readonly List<IgnoreEcholocation> ActiveMarkers = new List<IgnoreEcholocation>();
         private static readonly Vector4[] BoundsMin = new Vector4[MaxFogIgnoreRegions];
         private static readonly Vector4[] BoundsMax = new Vector4[MaxFogIgnoreRegions];
+        private readonly List<MeshRenderer> boundsRenderers = new();
+        private readonly List<Terrain> boundsTerrains = new();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetRegistry()
@@ -24,10 +26,9 @@ namespace AnEchoHasNoShape.Echolocation
 
         public static bool IsIgnored(Transform target)
         {
-            IgnoreEcholocation[] markers = target.GetComponentsInParent<IgnoreEcholocation>(true);
-            foreach (IgnoreEcholocation marker in markers)
+            for (Transform current = target; current != null; current = current.parent)
             {
-                if (marker.isActiveAndEnabled)
+                if (current.TryGetComponent(out IgnoreEcholocation marker) && marker.isActiveAndEnabled)
                 {
                     return true;
                 }
@@ -91,8 +92,8 @@ namespace AnEchoHasNoShape.Echolocation
             combinedBounds = default;
             bool hasBounds = false;
 
-            MeshRenderer[] renderers = GetComponentsInChildren<MeshRenderer>(true);
-            foreach (MeshRenderer renderer in renderers)
+            GetComponentsInChildren(true, boundsRenderers);
+            foreach (MeshRenderer renderer in boundsRenderers)
             {
                 if (!hasBounds)
                 {
@@ -105,8 +106,8 @@ namespace AnEchoHasNoShape.Echolocation
                 }
             }
 
-            Terrain[] terrains = GetComponentsInChildren<Terrain>(true);
-            foreach (Terrain terrain in terrains)
+            GetComponentsInChildren(true, boundsTerrains);
+            foreach (Terrain terrain in boundsTerrains)
             {
                 if (terrain.terrainData == null)
                 {

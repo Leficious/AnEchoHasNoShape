@@ -180,7 +180,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.Interaction.PhaseThroughVolume
   veilColor: {r: 0.055, g: 0.095, b: 0.12, a: 1}
-  shimmerColor: {r: 0.55, g: 0.83, b: 0.9, a: 1}
+  shimmerColor: {r: 0.54901963, g: 0.9019608, b: 0.7169017, a: 1}
   maximumOpacity: 0.82
   fadeDuration: 0.3
   distortionStrength: 0.024
@@ -2786,7 +2786,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.Interaction.PhaseThroughVolume
   veilColor: {r: 0.055, g: 0.095, b: 0.12, a: 1}
-  shimmerColor: {r: 0.55, g: 0.83, b: 0.9, a: 1}
+  shimmerColor: {r: 0.54901963, g: 0.9019608, b: 0.7169017, a: 1}
   maximumOpacity: 0.82
   fadeDuration: 0.3
   distortionStrength: 0.024
@@ -3260,7 +3260,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.Interaction.PhaseThroughVolume
   veilColor: {r: 0.055, g: 0.095, b: 0.12, a: 1}
-  shimmerColor: {r: 0.55, g: 0.83, b: 0.9, a: 1}
+  shimmerColor: {r: 0.54901963, g: 0.9019608, b: 0.7169017, a: 1}
   maximumOpacity: 0.82
   fadeDuration: 0.3
   distortionStrength: 0.024
@@ -3479,12 +3479,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.Interaction.ReadableTextInteractable
   interactionVerb: Read
-  text: "Three paths wander into the haze.\r\n\nOne toward still water holding what
-    is absent.\nOne toward a city, whose walls remember.\nOne toward a forest, whose
-    silence answers.\r\n\r\n[important]Beyond the golden gate,  \r\na false stone
-    bars the way.\r\nWhat offers no answer  \r\ncannot forbid your passage.[/important]\r\n\r\nFollow
-    each path until it has nothing left to tell you.\r\n\r\nWhen no road calls ahead,\nlisten
-    for the place that first heard you.\n\nIt may answer differently."
+  text: "Three paths wander into the haze.\r\n\nOne toward tides holding what is
+    absent.\nOne toward a city, whose walls remember.\nOne toward a forest, whose
+    silence answers.\r\n\r\n[important]A false stone bars the way.\r\nWhat offers
+    no answer  \r\ncannot forbid your passage.[/important]\r\n\r\nFollow each path
+    until it has nothing left to tell you.\r\nWhen no road calls ahead,\n\n[important]listen
+    for the place that first heard you.\nIt may answer differently.[/important]"
   charactersPerSecond: 48
   unlockEchoAfterFirstRead: 0
   triggerWorldReverberationAfterFirstRead: 1
@@ -8269,35 +8269,35 @@ MonoBehaviour:
       TangentIn:
         x: -0
         y: -0
-        z: -7.4306064
+        z: -7.4305277
       TangentOut:
         x: 0
         y: 0
-        z: 8.208918
+        z: 8.208462
       Rotation:
         value:
-          x: 0.011961548
-          y: -0.17719558
-          z: -0.0241512
-          w: 0.98380655
+          x: 0.008392616
+          y: -0.17727937
+          z: -0.024795352
+          w: 0.98381233
     - Position:
-        x: 118.412384
-        y: 0.60720825
-        z: 170.7385
+        x: 118.41265
+        y: 0.98324585
+        z: 170.74126
       TangentIn:
         x: -0
         y: -0
-        z: -7.80763
+        z: -7.80997
       TangentOut:
         x: 0
         y: 0
-        z: 6.6997967
+        z: 6.695645
       Rotation:
         value:
-          x: -0.025466807
-          y: -0.057246707
-          z: 0.08469905
-          w: 0.99443465
+          x: -0.024160668
+          y: -0.057268735
+          z: 0.08477733
+          w: 0.99445933
     - Position:
         x: 120.01266
         y: 2.5222473
@@ -8305,17 +8305,17 @@ MonoBehaviour:
       TangentIn:
         x: -0
         y: -0
-        z: -1.909653
+        z: -1.9059726
       TangentOut:
         x: 0
         y: 0
-        z: 1.909653
+        z: 1.9059726
       Rotation:
         value:
-          x: -0.048218574
-          y: 0.04430636
-          z: 0.046927314
-          w: 0.9967496
+          x: -0.03843805
+          y: 0.043884642
+          z: 0.04653703
+          w: 0.99721164
     m_MetaData:
     - Mode: 0
       Tension: 0.5
@@ -8433,6 +8433,7 @@ MonoBehaviour:
   speed: 3
   pulseSpacing: 9
   fadeInSeconds: 2
+  endpointFadeDistance: 3
   heightOffset: 0.08
   color: {r: 0.65, g: 0.95, b: 0.76, a: 0.8}
 --- !u!1001 &268811697
@@ -11156,7 +11157,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4459864851310106426, guid: 6bacecc4f3df9584198879c73a6b6c36, type: 3}
       propertyPath: far clip plane
-      value: 200
+      value: 400
       objectReference: {fileID: 0}
     - target: {fileID: 4459864851310106426, guid: 6bacecc4f3df9584198879c73a6b6c36, type: 3}
       propertyPath: m_BackGroundColor.b
@@ -13284,7 +13285,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.Interaction.PhaseThroughVolume
   veilColor: {r: 0.055, g: 0.095, b: 0.12, a: 1}
-  shimmerColor: {r: 0.55, g: 0.83, b: 0.9, a: 1}
+  shimmerColor: {r: 0.54901963, g: 0.9019608, b: 0.7169017, a: 1}
   maximumOpacity: 0.82
   fadeDuration: 0.3
   distortionStrength: 0.024
@@ -14080,7 +14081,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.Interaction.PhaseThroughVolume
   veilColor: {r: 0.055, g: 0.095, b: 0.12, a: 1}
-  shimmerColor: {r: 0.55, g: 0.83, b: 0.9, a: 1}
+  shimmerColor: {r: 0.54901963, g: 0.9019608, b: 0.7169017, a: 1}
   maximumOpacity: 0.82
   fadeDuration: 0.3
   distortionStrength: 0.024
@@ -14896,7 +14897,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.Interaction.PhaseThroughVolume
   veilColor: {r: 0.055, g: 0.095, b: 0.12, a: 1}
-  shimmerColor: {r: 0.55, g: 0.83, b: 0.9, a: 1}
+  shimmerColor: {r: 0.54901963, g: 0.9019608, b: 0.7169017, a: 1}
   maximumOpacity: 0.82
   fadeDuration: 0.3
   distortionStrength: 0.024
@@ -17548,7 +17549,7 @@ Terrain:
   m_Enabled: 1
   serializedVersion: 6
   m_TerrainData: {fileID: 15600000, guid: 3f6eaa9b216c78f43a8fa0a349fc91d6, type: 2}
-  m_TreeDistance: 5000
+  m_TreeDistance: 300
   m_TreeBillboardDistance: 50
   m_TreeCrossFadeLength: 5
   m_TreeMaximumFullLODCount: 50
@@ -21058,7 +21059,7 @@ Terrain:
   m_Enabled: 1
   serializedVersion: 6
   m_TerrainData: {fileID: 15600000, guid: 16cbd9b7d2b479747b674a94f4b61a7f, type: 2}
-  m_TreeDistance: 1000
+  m_TreeDistance: 300
   m_TreeBillboardDistance: 50
   m_TreeCrossFadeLength: 5
   m_TreeMaximumFullLODCount: 50
@@ -23361,7 +23362,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 826924390096936453, guid: 86adc5a3f7ee12f4096ad4f4b1482e49, type: 3}
       propertyPath: m_Name
-      value: Stonehenge_Rock_1 (1)
+      value: Gate1
       objectReference: {fileID: 0}
     - target: {fileID: 826924390096936453, guid: 86adc5a3f7ee12f4096ad4f4b1482e49, type: 3}
       propertyPath: m_IsActive
@@ -23783,7 +23784,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.Interaction.PhaseThroughVolume
   veilColor: {r: 0.055, g: 0.095, b: 0.12, a: 1}
-  shimmerColor: {r: 0.55, g: 0.83, b: 0.9, a: 1}
+  shimmerColor: {r: 0.54901963, g: 0.9019608, b: 0.7169017, a: 1}
   maximumOpacity: 0.82
   fadeDuration: 0.3
   distortionStrength: 0.024
@@ -24486,7 +24487,7 @@ Transform:
   m_GameObject: {fileID: 748059991}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -137.9, y: -1.92, z: -223.15}
+  m_LocalPosition: {x: 46.6, y: -1.92, z: -172.9}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -24569,6 +24570,59 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4910521076261438, guid: 8952f851d03275047a8be7e119e13728, type: 3}
   m_PrefabInstance: {fileID: 748874941}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &749398132
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 749398133}
+  - component: {fileID: 749398134}
+  m_Layer: 0
+  m_Name: BeaconMonument
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &749398133
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 749398132}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -2.99, y: -8.664619, z: 12.28}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1157609026}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &749398134
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 749398132}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8221caf36e00417b89eb10254704e1af, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.FogLighting.BeaconBeam
+  thickness: 2
+  color: {r: 1, g: 0.994107, b: 0, a: 0.7}
+  brightness: 1
+  height: 2000
+  upwardSpeed: 3
+  shimmer: 0.15
+  distanceFadeStart: 0.75
+  distanceFadeEnd: 0.95
+  requireAllRegionsCompleted: 1
 --- !u!1001 &755142737
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -28906,6 +28960,59 @@ MonoBehaviour:
   - {fileID: 4520716785383396158, guid: 03fb6f49d936d5e429b639fccb1f29a6, type: 3}
   - {fileID: 5949706081513176824, guid: a0cb3b35b5fb2564983f2275ffa69733, type: 3}
   characterPrefabsConfigured: 1
+--- !u!1 &905918846
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 905918847}
+  - component: {fileID: 905918848}
+  m_Layer: 0
+  m_Name: BeaconGlacier
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &905918847
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 905918846}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -85.312996, y: 1.256752, z: 140.30688}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1175690197}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &905918848
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 905918846}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8221caf36e00417b89eb10254704e1af, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.FogLighting.BeaconBeam
+  thickness: 1.2
+  color: {r: 0, g: 1, b: 0.9045028, a: 0.7}
+  brightness: 1
+  height: 2000
+  upwardSpeed: 3
+  shimmer: 0.15
+  distanceFadeStart: 0.75
+  distanceFadeEnd: 0.95
+  requireAllRegionsCompleted: 0
 --- !u!1001 &908607195
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -30743,7 +30850,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.Interaction.PhaseThroughVolume
   veilColor: {r: 0.055, g: 0.095, b: 0.12, a: 1}
-  shimmerColor: {r: 0.55, g: 0.83, b: 0.9, a: 1}
+  shimmerColor: {r: 0.54901963, g: 0.9019608, b: 0.7169017, a: 1}
   maximumOpacity: 0.82
   fadeDuration: 0.3
   distortionStrength: 0.024
@@ -38121,6 +38228,11 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 2799333393686033891, guid: 78b6d940d79576544be8e6ec28c84a0a, type: 3}
   m_PrefabInstance: {fileID: 1126582084}
   m_PrefabAsset: {fileID: 0}
+--- !u!4 &1132444619 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 400000, guid: 42dae9c689b614041936ba5f1a9b52e4, type: 3}
+  m_PrefabInstance: {fileID: 1965053463}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1133373342
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -38966,6 +39078,7 @@ Transform:
   - {fileID: 269698512}
   - {fileID: 526808962}
   - {fileID: 1133373343}
+  - {fileID: 749398133}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1159783985
@@ -39468,6 +39581,7 @@ Transform:
   - {fileID: 2120299216}
   - {fileID: 1237885515}
   - {fileID: 207720925}
+  - {fileID: 905918847}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1175717016
@@ -40696,11 +40810,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3571809843073538155, guid: a762916091eef8d4ea928498f6656573, type: 3}
       propertyPath: m_Name
-      value: Stonehenge_Rock_2
+      value: GoldenGate
       objectReference: {fileID: 0}
     - target: {fileID: 3571809843073538155, guid: a762916091eef8d4ea928498f6656573, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4240788363920278225, guid: a762916091eef8d4ea928498f6656573, type: 3}
       propertyPath: m_LocalScale.x
@@ -40761,6 +40875,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 3571809843073538155, guid: a762916091eef8d4ea928498f6656573, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1939877070}
+    - targetCorrespondingSourceObject: {fileID: 3571809843073538155, guid: a762916091eef8d4ea928498f6656573, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1939877071}
   m_SourcePrefab: {fileID: 100100000, guid: a762916091eef8d4ea928498f6656573, type: 3}
 --- !u!1001 &1229741556
 PrefabInstance:
@@ -42857,7 +42974,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.Interaction.PhaseThroughVolume
   veilColor: {r: 0.055, g: 0.095, b: 0.12, a: 1}
-  shimmerColor: {r: 0.55, g: 0.83, b: 0.9, a: 1}
+  shimmerColor: {r: 0.54901963, g: 0.9019608, b: 0.7169017, a: 1}
   maximumOpacity: 0.82
   fadeDuration: 0.3
   distortionStrength: 0.024
@@ -45289,6 +45406,59 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 14078101338571967, guid: 86adc5a3f7ee12f4096ad4f4b1482e49, type: 3}
   m_PrefabInstance: {fileID: 1615391614}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1349553993
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1349553994}
+  - component: {fileID: 1349553995}
+  m_Layer: 0
+  m_Name: BeaconWoods
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1349553994
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1349553993}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -136.941, y: -12.5, z: -210.81}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1438967889}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1349553995
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1349553993}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8221caf36e00417b89eb10254704e1af, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.FogLighting.BeaconBeam
+  thickness: 1.2
+  color: {r: 0, g: 1, b: 0.37567544, a: 0.7}
+  brightness: 1
+  height: 2000
+  upwardSpeed: 3
+  shimmer: 0.15
+  distanceFadeStart: 0.75
+  distanceFadeEnd: 0.95
+  requireAllRegionsCompleted: 0
 --- !u!1001 &1351071652
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -46790,6 +46960,59 @@ Transform:
   m_Children: []
   m_Father: {fileID: 85257730}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1385220613
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1385220614}
+  - component: {fileID: 1385220615}
+  m_Layer: 0
+  m_Name: BeaconCity
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1385220614
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1385220613}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: 0.70943886, z: -0, w: 0.70476705}
+  m_LocalPosition: {x: 1.9420292, y: -11.953247, z: 37.127384}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1854369228}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1385220615
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1385220613}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8221caf36e00417b89eb10254704e1af, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.FogLighting.BeaconBeam
+  thickness: 1.2
+  color: {r: 1, g: 0, b: 0, a: 0.7}
+  brightness: 1
+  height: 2000
+  upwardSpeed: 3
+  shimmer: 0.15
+  distanceFadeStart: 0.75
+  distanceFadeEnd: 0.95
+  requireAllRegionsCompleted: 0
 --- !u!1001 &1385225101
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -46912,7 +47135,7 @@ Terrain:
   m_Enabled: 1
   serializedVersion: 6
   m_TerrainData: {fileID: 15600000, guid: 79864249e681290428f8d02e5015ce49, type: 2}
-  m_TreeDistance: 5000
+  m_TreeDistance: 300
   m_TreeBillboardDistance: 50
   m_TreeCrossFadeLength: 5
   m_TreeMaximumFullLODCount: 50
@@ -48418,6 +48641,9 @@ Transform:
   - {fileID: 2109870780}
   - {fileID: 521344233}
   - {fileID: 653398452}
+  - {fileID: 1132444619}
+  - {fileID: 1349553994}
+  - {fileID: 91100000012}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1440366951 stripped
@@ -49361,6 +49587,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1476320835}
+  - component: {fileID: 1476320836}
   m_Layer: 0
   m_Name: ReverberationCenter
   m_TagString: Untagged
@@ -49377,12 +49604,38 @@ Transform:
   m_GameObject: {fileID: 1476320834}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 6.09228, y: 1.9786301, z: 4.93093}
+  m_LocalPosition: {x: -2.77, y: 1.9786301, z: 12.42}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1157609026}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1476320836
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1476320834}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e94ca6d99454708834cde3a20981972, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  range: 450
+  speed: 52
+  bandWidth: 7
+  trailLength: 24
+  fadeOutDistance: 70
+  brightness: 4.5
+  reverberationColor: {r: 1, g: 0.66, b: 0.2, a: 1}
+  fogRevealStrength: 0.85
+  audioSource: {fileID: 0}
+  globalEchoSound: {fileID: 8300000, guid: d89a142cdc4804c4bb3efc62bddacfdd, type: 3}
+  globalEchoVolume: 1
+  shortPulseDuration: 5
+  shortPulseInterval: {x: 7, y: 8}
+  shortEchoSound: {fileID: 8300000, guid: d89a142cdc4804c4bb3efc62bddacfdd, type: 3}
 --- !u!1001 &1476796061
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -51132,6 +51385,10 @@ MonoBehaviour:
   woodsFogColor: {r: 0.4, g: 0.55, b: 0.48, a: 1}
   overrideWoodsFogAmbientLight: 1
   woodsFogAmbientLightScale: 1
+  endingFog:
+    color: {r: 0.93780184, g: 0.94070077, b: 0.4449945, a: 1}
+    ambientLightScale: 1
+  endingFogFadeSeconds: 5
   defaultSoundtrack:
     clip: {fileID: 0}
     volume: 0.5
@@ -51143,6 +51400,9 @@ MonoBehaviour:
     volume: 0.3
   woodsSoundtrack:
     clip: {fileID: 8300000, guid: 5db90a7b23281c6459ba2be9b0bd9199, type: 3}
+    volume: 0.5
+  endingSoundtrack:
+    clip: {fileID: 8300000, guid: 454efd53dbd45ff40a0b58c3fc23209f, type: 3}
     volume: 0.5
   museAmbience:
     clip: {fileID: 8300000, guid: 47125a6121b37f648bc3f12862cface2, type: 3}
@@ -51166,8 +51426,8 @@ MonoBehaviour:
   checkpointBlackHoldDuration: 0.08
   checkpointFadeFromBlackDuration: 0.7
   enableDevelopmentTools: 1
-  initialSpawnPoint: 6
-  tutorialCompleted: 1
+  initialSpawnPoint: 0
+  tutorialCompleted: 0
   centerMonumentSpawn: {fileID: 526808962}
   glacierMonumentSpawn: {fileID: 1493934166}
   glacierCitySpawn: {fileID: 500607709}
@@ -53414,7 +53674,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.Interaction.PhaseThroughVolume
   veilColor: {r: 0.055, g: 0.095, b: 0.12, a: 1}
-  shimmerColor: {r: 0.55, g: 0.83, b: 0.9, a: 1}
+  shimmerColor: {r: 0.54901963, g: 0.9019608, b: 0.7169017, a: 1}
   maximumOpacity: 0.82
   fadeDuration: 0.3
   distortionStrength: 0.024
@@ -56092,7 +56352,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 826924390096936453, guid: 86adc5a3f7ee12f4096ad4f4b1482e49, type: 3}
       propertyPath: m_Name
-      value: Stonehenge_Rock_1
+      value: Gate2
       objectReference: {fileID: 0}
     - target: {fileID: 826924390096936453, guid: 86adc5a3f7ee12f4096ad4f4b1482e49, type: 3}
       propertyPath: m_IsActive
@@ -59732,7 +59992,7 @@ Terrain:
   m_Enabled: 1
   serializedVersion: 6
   m_TerrainData: {fileID: 15600000, guid: b72bf6f587affff448a9baab699a2755, type: 2}
-  m_TreeDistance: 5000
+  m_TreeDistance: 300
   m_TreeBillboardDistance: 50
   m_TreeCrossFadeLength: 5
   m_TreeMaximumFullLODCount: 50
@@ -62384,119 +62644,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 1765952565030595340, guid: e363c8c00427a27419bc2a211ff39e86, type: 3}
   m_PrefabInstance: {fileID: 1813607262}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &1817221609
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1817221611}
-  - component: {fileID: 1817221610}
-  m_Layer: 0
-  m_Name: GameManager (1)
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1817221610
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1817221609}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f7f20291cf8047fc9e4d47856fa66e32, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.GameManager
-  headerFont: {fileID: 12800000, guid: 0ef9bfd59303f004c961fed4ccf9796a, type: 3}
-  bodyFont: {fileID: 12800000, guid: 0ef9bfd59303f004c961fed4ccf9796a, type: 3}
-  interactionFont: {fileID: 12800000, guid: afd47bcd4a60cfd48bb7ec10cf85bd72, type: 3}
-  enableFogAtGameStart: 1
-  fogStrength: 0.15
-  glacierFogColor: {r: 0.782779, g: 0.881916, b: 0.95687324, a: 1}
-  overrideGlacierFogAmbientLight: 1
-  glacierFogAmbientLightScale: 1
-  cityDefaultFog:
-    color: {r: 0.51, g: 0.62, b: 0.63, a: 1}
-    ambientLightScale: 1
-  cityMuseFog:
-    color: {r: 0.45, g: 0.65, b: 0.8, a: 1}
-    ambientLightScale: 1
-  cityRulerFog:
-    color: {r: 0.65, g: 0.4, b: 0.38, a: 1}
-    ambientLightScale: 1
-  cityArchitectFog:
-    color: {r: 0.4, g: 0.65, b: 0.48, a: 1}
-    ambientLightScale: 1
-  cityGoldFog:
-    color: {r: 0.8, g: 0.7, b: 0.4, a: 1}
-    ambientLightScale: 1
-  woodsFogColor: {r: 0.4, g: 0.55, b: 0.48, a: 1}
-  overrideWoodsFogAmbientLight: 1
-  woodsFogAmbientLightScale: 1
-  defaultSoundtrack:
-    clip: {fileID: 0}
-    volume: 0.5
-  glacierSoundtrack:
-    clip: {fileID: 8300000, guid: 8baa637deb9ac784eaf6be16f299e67c, type: 3}
-    volume: 0.2
-  citySoundtrack:
-    clip: {fileID: 8300000, guid: fdafc03d9097a734f9006e7795078356, type: 3}
-    volume: 0.3
-  woodsSoundtrack:
-    clip: {fileID: 8300000, guid: 5db90a7b23281c6459ba2be9b0bd9199, type: 3}
-    volume: 0.5
-  museAmbience:
-    clip: {fileID: 8300000, guid: 47125a6121b37f648bc3f12862cface2, type: 3}
-    volume: 0.5
-  rulerAmbience:
-    clip: {fileID: 8300000, guid: a96f97f1e096555498755bf55ea9ed27, type: 3}
-    volume: 1
-  architectAmbience:
-    clip: {fileID: 0}
-    volume: 0.5
-  enableCityRumble: 1
-  cityRumbleDuration: 8
-  cityRumbleAngle: 0.22
-  cityRumbleFrequency: 7
-  soundtrackBlendSeconds: 3
-  regionTitleFadeIn: 1.2
-  regionTitleHold: 3
-  regionTitleFadeOut: 1.5
-  startWithEchoUnlocked: 0
-  checkpointFadeToBlackDuration: 0.25
-  checkpointBlackHoldDuration: 0.08
-  checkpointFadeFromBlackDuration: 0.7
-  enableDevelopmentTools: 1
-  initialSpawnPoint: 6
-  tutorialCompleted: 1
-  centerMonumentSpawn: {fileID: 526808962}
-  glacierMonumentSpawn: {fileID: 1493934166}
-  glacierCitySpawn: {fileID: 500607709}
-  glacierMidSpawn: {fileID: 218644707}
-  glacierEndSpawn: {fileID: 2100599500}
-  cityMainEntranceSpawn: {fileID: 1202748133}
-  woodsEndSpawn: {fileID: 1953294307}
---- !u!4 &1817221611
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1817221609}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 10.8729, y: -0, z: -7.96906}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1817969215
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -64140,6 +64287,8 @@ Transform:
   - {fileID: 783056486}
   - {fileID: 2070958287}
   - {fileID: 1239866273}
+  - {fileID: 91100000002}
+  - {fileID: 1385220614}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: -90.379, z: 0}
 --- !u!114 &1854369229
@@ -65496,7 +65645,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.Interaction.PhaseThroughVolume
   veilColor: {r: 0.055, g: 0.095, b: 0.12, a: 1}
-  shimmerColor: {r: 0.55, g: 0.83, b: 0.9, a: 1}
+  shimmerColor: {r: 0.54901963, g: 0.9019608, b: 0.7169017, a: 1}
   maximumOpacity: 0.82
   fadeDuration: 0.3
   distortionStrength: 0.024
@@ -67238,6 +67387,42 @@ MonoBehaviour:
   fadeOutDuration: 0.9
   shimmerStrength: 0.12
   shimmerSpeed: 2.2
+--- !u!114 &1939877071
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1939877065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2796cf40d46148be9b09fd5dcae2b046, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  onEndingRequested:
+    m_PersistentCalls:
+      m_Calls: []
+  pulseDuration: 3
+  pulseInterval: 6.5
+  shakeStrength: {x: 1, y: 5}
+  shakingAudio: {fileID: 8300000, guid: 53b84f7e0d2b3134aac4b8aa64e574fe, type: 3}
+  shakingVolume: {x: 0.15, y: 0.85}
+  paleGold: {r: 1, g: 0.91, b: 0.65, a: 1}
+  phaseOpacity: 0.82
+  phaseDistortion: 0.024
+  phaseVignette: 1.45
+  phaseFadeSeconds: 0.8
+  audioFadeSeconds: 3
+  goldHoldSeconds: 2
+  fadeToBlackSeconds: 5
+  lines:
+  - What you called the world was shaped, in part, by the eyes that met it.
+  - It offered no final answer. Still, you chose to walk and to listen.
+  - "Thank you for looking closely\u2014and for coming this far."
+  textFadeSeconds: 1.5
+  textHoldSeconds: 3
+  endingTitle: An Echo Has No Sound
+  endingCaption: Fin.
 --- !u!1001 &1946800171
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -68006,7 +68191,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 0}
+    m_TransformParent: {fileID: 1438967889}
     m_Modifications:
     - target: {fileID: 100000, guid: 42dae9c689b614041936ba5f1a9b52e4, type: 3}
       propertyPath: m_Name
@@ -68014,15 +68199,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 42dae9c689b614041936ba5f1a9b52e4, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -197.31
+      value: -136.97058
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 42dae9c689b614041936ba5f1a9b52e4, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 100.622604
+      value: -2.8541489
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 42dae9c689b614041936ba5f1a9b52e4, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -194.88103
+      value: -219.67772
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 42dae9c689b614041936ba5f1a9b52e4, type: 3}
       propertyPath: m_LocalRotation.w
@@ -68034,7 +68219,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 42dae9c689b614041936ba5f1a9b52e4, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: 42dae9c689b614041936ba5f1a9b52e4, type: 3}
       propertyPath: m_LocalRotation.z
@@ -70605,6 +70790,7 @@ MonoBehaviour:
   speed: 3
   pulseSpacing: 9
   fadeInSeconds: 2
+  endpointFadeDistance: 3
   heightOffset: 0.08
   color: {r: 0.65, g: 0.95, b: 0.76, a: 0.8}
 --- !u!1001 &2014913422
@@ -70852,7 +71038,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.Interaction.PhaseThroughVolume
   veilColor: {r: 0.055, g: 0.095, b: 0.12, a: 1}
-  shimmerColor: {r: 0.55, g: 0.83, b: 0.9, a: 1}
+  shimmerColor: {r: 0.54901963, g: 0.9019608, b: 0.7169017, a: 1}
   maximumOpacity: 0.82
   fadeDuration: 0.3
   distortionStrength: 0.024
@@ -76789,6 +76975,132 @@ MonoBehaviour:
   surfaceWaveHeight: 0.085
   surfaceFogFadeStart: 1.03
   surfaceFogFadeEnd: 35.4
+--- !u!1 &91100000001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 91100000002}
+  - component: {fileID: 91100000003}
+  m_Layer: 0
+  m_Name: City Rising Streaks
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &91100000002
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 91100000001}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: 0.70943886, z: -0, w: 0.70476705}
+  m_LocalPosition: {x: -59.129925, y: -102.93, z: 177.29454}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1854369228}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &91100000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 91100000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bdc321581031454aba52322767611755, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.FogLighting.RegionAtmosphereVfx
+  region: 0
+  count: 200
+  tint: {r: 0.7, g: 0.8, b: 0.9, a: 0.32}
+  width: 0.05
+  length: 2
+  radius: 18
+  height: 12
+  lifetime: 14
+  groundClearance: 0.1
+  groundBias: 3
+  variation: 0.45
+  parallelStreakChance: 0.5
+  velocity: {x: 0.025, y: 0.65, z: 0.015}
+  flowAmplitude: 0
+  flowSpeed: 0
+  echoResponse: 0.5
+  fadeStart: 3
+  fadeEnd: 20
+  fadePower: 1.5
+--- !u!1 &91100000011
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 91100000012}
+  - component: {fileID: 91100000013}
+  m_Layer: 0
+  m_Name: Woods Flowing Strands
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &91100000012
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 91100000011}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 60.33942, y: -103.47675, z: -24.79669}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1438967889}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &91100000013
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 91100000011}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bdc321581031454aba52322767611755, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.FogLighting.RegionAtmosphereVfx
+  region: 1
+  count: 40
+  tint: {r: 0.65, g: 0.85, b: 0.72, a: 0.3}
+  width: 0.1
+  length: 3.2
+  radius: 18
+  height: 12
+  lifetime: 14
+  groundClearance: 0.35
+  groundBias: 3
+  variation: 0.45
+  parallelStreakChance: 0.4
+  velocity: {x: 1, y: 0.015, z: 1}
+  flowAmplitude: 0.2
+  flowSpeed: 1
+  echoResponse: 0.5
+  fadeStart: 3
+  fadeEnd: 20
+  fadePower: 1.5
 --- !u!114 &91175690197
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -76891,13 +77203,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e0dbf0a8d99425b9a3befad71555b40, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AnEchoHasNoShape.FogLighting.GlacierSnowfallRig
-  emissionRate: 72
-  spawnArea: {x: 34, y: 2, z: 34}
-  spawnHeight: 13
+  emissionRate: 180
+  spawnArea: {x: 50, y: 2, z: 50}
+  spawnHeight: 12
   particleLifetime: 8
   fallSpeed: 2.1
-  particleSize: {x: 0.045, y: 0.12}
-  snowColor: {r: 0.83, g: 0.93, b: 1, a: 0.72}
+  particleSize: {x: 0.055, y: 0.145}
+  snowColor: {r: 0.81646085, g: 0.87591326, b: 0.9137466, a: 0.85}
+  distanceFadeStart: 0
+  distanceFadeEnd: 18
+  distanceFadePower: 2
   horizontalWind: {x: 0.28, y: 0.11}
   turbulence: 0.36
   turbulenceScale: 0.28
@@ -77168,7 +77483,6 @@ SceneRoots:
   m_Roots:
   - {fileID: 832575519}
   - {fileID: 1512654029}
-  - {fileID: 1817221611}
   - {fileID: 358631643}
   - {fileID: 1157609026}
   - {fileID: 1175690197}
@@ -77183,4 +77497,3 @@ SceneRoots:
   - {fileID: 1196343457}
   - {fileID: 1708892128}
   - {fileID: 1821955748}
-  - {fileID: 1965053463}

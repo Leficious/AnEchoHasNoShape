@@ -76,6 +76,8 @@ namespace AnEchoHasNoShape
         [SerializeField] private CityFogPreset cityGoldFog = new CityFogPreset(new Color(0.8f, 0.7f, 0.4f), 1f);
         private CityFogPreset activeCityFog;
         private float cityFogBlend;
+        public float CityAreaBlend => cityFogBlend;
+        public float WoodsAreaBlend => woodsFogBlend;
 
         public CityFogPreset GetCityFogPreset(int perspective)
         {
@@ -105,6 +107,14 @@ namespace AnEchoHasNoShape
         private Transform woodsFogPlayer;
         private float woodsFogBlend;
 
+        [Header("Ending Fog")]
+        [Tooltip("Global fog color and ambient brightness after all three regions are cleared. Takes priority over every region's fog settings.")]
+        [SerializeField] private CityFogPreset endingFog = new CityFogPreset(new Color(0.8f, 0.7f, 0.4f), 1f);
+        [SerializeField, Min(0.01f)] private float endingFogFadeSeconds = 5f;
+        private Color endingFogStartColor;
+        private float endingFogStartAmbient;
+        private float endingFogFadeElapsed;
+
         [System.Serializable]
         private sealed class RegionSoundtrack
         {
@@ -119,6 +129,12 @@ namespace AnEchoHasNoShape
         [SerializeField] private RegionSoundtrack glacierSoundtrack = new RegionSoundtrack();
         [SerializeField] private RegionSoundtrack citySoundtrack = new RegionSoundtrack();
         [SerializeField] private RegionSoundtrack woodsSoundtrack = new RegionSoundtrack();
+        [Header("Ending Music")]
+        [Tooltip("Loops after the third region is cleared and replaces the four regional music tracks. Character ambience and sound effects continue.")]
+        [SerializeField] private RegionSoundtrack endingSoundtrack = new RegionSoundtrack();
+        private bool endingMusicUnlocked;
+        private float endingMusicFadeRemaining = -1f;
+        private float endingMusicFadeDuration;
         [Header("City Character Ambience")]
         [SerializeField] private RegionSoundtrack museAmbience = new RegionSoundtrack();
         [SerializeField] private RegionSoundtrack rulerAmbience = new RegionSoundtrack();
@@ -132,6 +148,8 @@ namespace AnEchoHasNoShape
         [SerializeField, Range(0f, 2f)] private float cityRumbleAngle = 0.22f;
         [SerializeField, Min(0.1f)] private float cityRumbleFrequency = 7f;
         private float cityRumbleElapsed = float.PositiveInfinity;
+        private float activeRumbleDuration;
+        private float activeRumbleStrength = 1f;
         private Transform cityRumbleCamera;
         private Quaternion rumbleBaseRotation, rumbleAppliedRotation;
         private bool rumbleApplied;
@@ -148,7 +166,7 @@ namespace AnEchoHasNoShape
 
         private void ApplyCityRumble()
         {
-            if (!enableCityRumble || cityRumbleElapsed >= cityRumbleDuration || Time.timeScale <= 0f) return;
+            if (!enableCityRumble || cityRumbleElapsed >= activeRumbleDuration || Time.timeScale <= 0f) return;
             if (cityRumbleCamera == null)
             {
                 FirstPersonController controller = FindAnyObjectByType<FirstPersonController>();
@@ -156,14 +174,14 @@ namespace AnEchoHasNoShape
             }
             cityRumbleElapsed += Time.deltaTime;
             if (cityRumbleCamera == null) return;
-            float progress = Mathf.Clamp01(cityRumbleElapsed / Mathf.Max(0.1f, cityRumbleDuration));
+            float progress = Mathf.Clamp01(cityRumbleElapsed / Mathf.Max(0.1f, activeRumbleDuration));
             float envelope = Mathf.SmoothStep(0f, 1f, progress / 0.2f)
                 * (1f - Mathf.SmoothStep(0f, 1f, (progress - 0.65f) / 0.35f));
             float t = Time.time * cityRumbleFrequency;
             Vector3 angles = new Vector3(Mathf.PerlinNoise(t, 13.7f) - 0.5f,
                 Mathf.PerlinNoise(29.1f, t) - 0.5f, (Mathf.PerlinNoise(t, 47.3f) - 0.5f) * 0.5f);
             rumbleBaseRotation = cityRumbleCamera.localRotation;
-            rumbleAppliedRotation = rumbleBaseRotation * Quaternion.Euler(angles * (2f * cityRumbleAngle * envelope));
+            rumbleAppliedRotation = rumbleBaseRotation * Quaternion.Euler(angles * (2f * cityRumbleAngle * activeRumbleStrength * envelope));
             cityRumbleCamera.localRotation = rumbleAppliedRotation;
             rumbleApplied = true;
         }
@@ -179,10 +197,23 @@ namespace AnEchoHasNoShape
             cityAmbienceWeights = weights;
         }
 
-        public void PlayCityEchoSound()
+        public void PlayEchoCameraRumble(float maximumDuration = float.PositiveInfinity, float strength = 1f)
         {
             // Restart, never stack multiple camera offsets on rapid phase changes.
+            activeRumbleDuration = Mathf.Max(0.1f, Mathf.Min(cityRumbleDuration, maximumDuration));
+            activeRumbleStrength = Mathf.Max(0f, strength);
             cityRumbleElapsed = 0f;
+        }
+
+        public void StopEchoCameraRumble()
+        {
+            RemoveCityRumble();
+            cityRumbleElapsed = float.PositiveInfinity;
+        }
+
+        public void PlayCityEchoSound()
+        {
+            PlayEchoCameraRumble();
             var library = AnEchoHasNoShape.Core.GameAudioLibrary.Load();
             if (library == null || library.CityEchoClip == null) return;
             if (cityEchoAudio == null)
@@ -201,6 +232,9 @@ namespace AnEchoHasNoShape
 
         private void UpdateRegionSoundtracks()
         {
+            if (endingMusicFadeRemaining >= 0f)
+                endingMusicFadeRemaining = Mathf.Max(0f, endingMusicFadeRemaining - Time.unscaledDeltaTime);
+
             // Empty regional slots leave the default playing. Normalise overlapping
             // zones so their combined weight never exceeds one.
             float glacier = glacierSoundtrack.clip != null ? Mathf.Clamp01(fogColorBlendAmount) : 0f;
@@ -208,13 +242,31 @@ namespace AnEchoHasNoShape
             float woods = woodsSoundtrack.clip != null ? Mathf.Clamp01(woodsFogBlend) : 0f;
             float outside = 1f - Mathf.Max(glacier, city, woods);
             float total = Mathf.Max(1f, outside + glacier + city + woods);
-            UpdateSoundtrack(defaultSoundtrack, "Default Soundtrack", outside / total);
-            UpdateSoundtrack(glacierSoundtrack, "Glacial Ocean Soundtrack", glacier / total);
-            UpdateSoundtrack(citySoundtrack, "Unremembered City Soundtrack", city / total);
-            UpdateSoundtrack(woodsSoundtrack, "Illusory Woods Soundtrack", woods / total);
+            float endingOverride = endingMusicUnlocked && endingSoundtrack.clip != null ? 1f : 0f;
+            float regionalWeight = 1f - endingOverride;
+            UpdateSoundtrack(defaultSoundtrack, "Default Soundtrack", outside / total * regionalWeight);
+            UpdateSoundtrack(glacierSoundtrack, "Glacial Ocean Soundtrack", glacier / total * regionalWeight);
+            UpdateSoundtrack(citySoundtrack, "Unremembered City Soundtrack", city / total * regionalWeight);
+            UpdateSoundtrack(woodsSoundtrack, "Illusory Woods Soundtrack", woods / total * regionalWeight);
+            float endingFade = endingMusicFadeRemaining < 0f ? 1f
+                : endingMusicFadeRemaining / Mathf.Max(0.01f, endingMusicFadeDuration);
+            UpdateSoundtrack(endingSoundtrack, "Ending Music", endingOverride);
+            if (endingSoundtrack.source != null)
+            {
+                endingSoundtrack.source.volume *= endingFade;
+                if (endingOverride > 0f && endingFade <= 0f && endingSoundtrack.source.isPlaying)
+                    endingSoundtrack.source.Stop();
+            }
             UpdateSoundtrack(museAmbience, "Muse Ambience", Mathf.Clamp01(cityAmbienceWeights.x) * cityFogBlend);
             UpdateSoundtrack(rulerAmbience, "Ruler Ambience", Mathf.Clamp01(cityAmbienceWeights.y) * cityFogBlend);
             UpdateSoundtrack(architectAmbience, "Architect Ambience", Mathf.Clamp01(cityAmbienceWeights.z) * cityFogBlend);
+        }
+
+        public void FadeOutEndingMusic(float duration)
+        {
+            if (!endingMusicUnlocked || endingMusicFadeRemaining >= 0f) return;
+            endingMusicFadeDuration = Mathf.Max(0.01f, duration);
+            endingMusicFadeRemaining = endingMusicFadeDuration;
         }
 
         private void UpdateSoundtrack(RegionSoundtrack track, string label, float target)
@@ -314,6 +366,55 @@ namespace AnEchoHasNoShape
         private bool echoUnlocked;
         private bool developmentStateApplied;
         private int completedWorldReverberations;
+        public enum CompletedRegion { Glacier, City, Woods }
+        private readonly bool[] completedRegions = new bool[3];
+        public bool AllRegionsCompleted => completedRegions[0] && completedRegions[1] && completedRegions[2];
+        public bool IsRegionCompleted(CompletedRegion region) => completedRegions[(int)region];
+
+        public void RegisterRegionCompletion(CompletedRegion region)
+        {
+            if (IsRegionCompleted(region)) return;
+            completedRegions[(int)region] = true;
+            RegisterWorldReverberationCompletion();
+            if (AllRegionsCompleted)
+            {
+                endingMusicUnlocked = true;
+                endingFogStartColor = volumetricFogMaterial != null
+                    ? volumetricFogMaterial.GetColor(FogColourId) : defaultFogColor;
+                endingFogStartAmbient = hasDefaultFogAmbientScale && volumetricFogMaterial != null
+                    ? volumetricFogMaterial.GetFloat(FogAmbientScaleId) : defaultFogAmbientScale;
+                endingFogFadeElapsed = 0f;
+                ApplyFogColor();
+                OpenMonumentEndingGates();
+            }
+        }
+
+        private void OpenMonumentEndingGates()
+        {
+            // Include inactive children: GoldenGate starts disabled in the scene.
+            // Scope the lookup to this scene's monument so other gates are untouched.
+            foreach (Transform candidate in FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (candidate.gameObject.scene != gameObject.scene || candidate.name != "StoneMonument") continue;
+                foreach (Transform gate in candidate.GetComponentsInChildren<Transform>(true))
+                {
+                    if (gate.name == "GoldenGate")
+                    {
+                        gate.gameObject.SetActive(true);
+                        foreach (MeshRenderer renderer in gate.GetComponentsInChildren<MeshRenderer>(true))
+                        {
+                            if ((renderer.gameObject.hideFlags & HideFlags.DontSave) != 0) continue;
+                            renderer.enabled = false;
+                            // Inactive at startup: install its separate echo overlays on unlock.
+                            if (renderer.GetComponent<MeshFilter>() != null &&
+                                renderer.GetComponent<EchoReactiveSurface>() == null)
+                                renderer.gameObject.AddComponent<EchoReactiveSurface>();
+                        }
+                    }
+                    else if (gate.name == "Gate1" || gate.name == "Gate2") gate.gameObject.SetActive(false);
+                }
+            }
+        }
         private PlayerCheckpoint currentCheckpoint = PlayerCheckpoint.Monument;
         private Canvas checkpointFadeCanvas;
         private CanvasGroup checkpointFadeGroup;
@@ -382,6 +483,11 @@ namespace AnEchoHasNoShape
         private void Update()
         {
             if (Instance != this) return;
+            if (AllRegionsCompleted)
+            {
+                endingFogFadeElapsed += Time.deltaTime;
+                ApplyFogColor();
+            }
             RemoveCityRumble();
             UpdateRegionSoundtracks();
             if (regionTitlePlayer == null)
@@ -889,6 +995,19 @@ namespace AnEchoHasNoShape
         {
             if (!hasDefaultFogColor || volumetricFogMaterial == null)
             {
+                return;
+            }
+
+            // Keep regional blend values live for ambience and VFX, but give the
+            // completed-world appearance priority on every fog update.
+            if (AllRegionsCompleted)
+            {
+                float blend = Mathf.SmoothStep(0f, 1f,
+                    Mathf.Clamp01(endingFogFadeElapsed / Mathf.Max(0.01f, endingFogFadeSeconds)));
+                volumetricFogMaterial.SetColor(FogColourId, Color.Lerp(endingFogStartColor, endingFog.color, blend));
+                if (hasDefaultFogAmbientScale)
+                    volumetricFogMaterial.SetFloat(FogAmbientScaleId,
+                        Mathf.Lerp(endingFogStartAmbient, Mathf.Max(0f, endingFog.ambientLightScale), blend));
                 return;
             }
 

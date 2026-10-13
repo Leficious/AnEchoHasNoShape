@@ -284,7 +284,7 @@ namespace AnEchoHasNoShape.Echolocation
                     goldStarted = true;
                     WorldReverberationController world = WorldReverberationController.Instance;
                     world?.TriggerReverberation();
-                    GameManager.Instance?.RegisterWorldReverberationCompletion();
+                    GameManager.Instance?.RegisterRegionCompletion(GameManager.CompletedRegion.City);
                     BeginWave(world != null ? world.transform.position : origin,
                         world != null ? world.ReverberationColor : new Color(1f, 0.66f, 0.2f),
                         world != null ? world.PulseSpeed : pulseSpeed);

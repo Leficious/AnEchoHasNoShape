@@ -22,6 +22,15 @@ these dependencies are restored. In particular, project-owned scripts reference
 the first-person controller, and the scene/rendering setup references the AERO
 fog package.
 
+## Local player controller compatibility fixes
+
+`Tools/RepairLocalVendorIntegration.ps1` also restores trigger-safe ground checks
+and independent mouse yaw in the vendor first-person controller. Yaw is accumulated
+from input, applied to the camera joint in Update/LateUpdate, and sent to the body
+through MoveRotation in FixedUpdate. Movement uses that same yaw; teleporting
+resynchronizes the joint. Rigidbody position interpolation and camera-local effects
+are retained. Reapply these fixes after restoring the excluded controller source.
+
 ## Local foliage shader compatibility fix
 
 The Polytope foliage shader needs opaque alpha-cutout rendering for AERO fog.
@@ -69,6 +78,21 @@ extra grass objects or overlay draw passes. Loose grass prefabs skip the normal
 outline/wireframe installer. Repeated setup preserves nonzero material tuning.
 
 ## Folder migration map
+
+### Muse-only terrain flowers
+
+Place `CityMuseVegetation` on a flower prefab's root (currently `PT_Poppy_02`).
+`TerrainMuseVegetationProxy` reads marked terrain detail prototypes at runtime,
+builds patch-sized reveal meshes from Unity's detail instance transforms, and
+hides only those original detail layers on a temporary TerrainData copy. Saved
+density maps, terrain texture paint, and prefab materials are not modified.
+The component's opacity/cutoff settings apply to the generated materials.
+The terrain echo build preprocessor enables mesh Read/Write for these marked
+detail models as well as tree models. The local Poppy model has Read/Write enabled.
+The licensed prefab/component attachment remains in the excluded vendor folder;
+reapply that attachment after restoring the pack. Scene-placed flowers still use
+the same component directly. This path handles mesh detail prototypes, not
+texture-only grass billboards.
 
 | Previous path | Current path |
 | --- | --- |

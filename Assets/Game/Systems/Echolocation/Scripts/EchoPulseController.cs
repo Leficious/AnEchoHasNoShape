@@ -138,7 +138,7 @@ namespace AnEchoHasNoShape.Echolocation
 
         private void Update()
         {
-            bool inputIsAvailable = Time.timeScale > 0f &&
+            bool inputIsAvailable = !GoldenGateInteractable.IsEnding && Time.timeScale > 0f &&
                                     (InteractionTextPanel.Instance == null || !InteractionTextPanel.Instance.IsOpen);
 
             bool echoIsUnlocked = GameManager.Instance == null || GameManager.Instance.EchoUnlocked;

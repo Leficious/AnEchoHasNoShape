@@ -14,13 +14,21 @@ namespace AnEchoHasNoShape.FogLighting
         private const string ShaderName = "An Echo Has No Shape/Glacier Snow Particle";
 
         [Header("Snowfall")]
-        [SerializeField, Range(0f, 250f)] private float emissionRate = 72f;
+        [SerializeField, Range(0f, 250f)] private float emissionRate = 90f;
         [SerializeField] private Vector3 spawnArea = new Vector3(34f, 2f, 34f);
         [SerializeField, Range(2f, 30f)] private float spawnHeight = 13f;
         [SerializeField, Range(1f, 20f)] private float particleLifetime = 8f;
         [SerializeField, Range(0.1f, 8f)] private float fallSpeed = 2.1f;
-        [SerializeField] private Vector2 particleSize = new Vector2(0.045f, 0.12f);
-        [SerializeField] private Color snowColor = new Color(0.83f, 0.93f, 1f, 0.72f);
+        [SerializeField] private Vector2 particleSize = new Vector2(0.055f, 0.145f);
+        [SerializeField] private Color snowColor = new Color(0.9f, 0.96f, 1f, 0.85f);
+
+        [Header("Distance Fade (Live Preview In Play Mode)")]
+        [Tooltip("Camera distance in metres where flakes begin fading.")]
+        [SerializeField, Min(0f)] private float distanceFadeStart = 2f;
+        [Tooltip("Camera distance in metres where flakes become invisible.")]
+        [SerializeField, Min(0.01f)] private float distanceFadeEnd = 24f;
+        [Tooltip("1 is a smooth fade. Higher values fade more strongly; lower values retain visibility longer.")]
+        [SerializeField, Range(0.1f, 5f)] private float distanceFadePower = 2f;
 
         [Header("Air Movement")]
         [SerializeField] private Vector2 horizontalWind = new Vector2(0.28f, 0.11f);
@@ -32,6 +40,46 @@ namespace AnEchoHasNoShape.FogLighting
         private ParticleSystem snowfall;
         private Material generatedMaterial;
         private float areaBlend;
+        private ParticleSystem.Particle[] particleBuffer;
+
+        private Vector3 CoverageSize => new Vector3(
+            Mathf.Max(spawnArea.x, (distanceFadeEnd + 2f) * 2f),
+            Mathf.Max(0.1f, spawnArea.y),
+            Mathf.Max(spawnArea.z, (distanceFadeEnd + 2f) * 2f));
+
+        private void PositionVolume()
+        {
+            if (player != null && generatedObject != null)
+                generatedObject.transform.position = player.position + Vector3.up * spawnHeight;
+        }
+
+        private void RecycleSnow()
+        {
+            if (snowfall == null || player == null || !snowfall.isPlaying) return;
+            int capacity = snowfall.main.maxParticles;
+            if (particleBuffer == null || particleBuffer.Length < capacity)
+                particleBuffer = new ParticleSystem.Particle[capacity];
+            int count = snowfall.GetParticles(particleBuffer);
+            Vector3 size = CoverageSize;
+            Vector3 center = player.position;
+            for (int i = 0; i < count; i++)
+            {
+                Vector3 p = particleBuffer[i].position;
+                p.x = center.x + Mathf.Repeat(p.x - center.x + size.x * 0.5f, size.x) - size.x * 0.5f;
+                p.z = center.z + Mathf.Repeat(p.z - center.z + size.z * 0.5f, size.z) - size.z * 0.5f;
+                particleBuffer[i].position = p;
+            }
+            snowfall.SetParticles(particleBuffer, count);
+        }
+        private static readonly int DistanceFadeId = Shader.PropertyToID("_DistanceFade");
+
+        private void ApplyDistanceFade()
+        {
+            if (generatedMaterial == null) return;
+            float start = Mathf.Max(0f, distanceFadeStart);
+            generatedMaterial.SetVector(DistanceFadeId, new Vector4(start,
+                Mathf.Max(start + 0.01f, distanceFadeEnd), Mathf.Clamp(distanceFadePower, 0.1f, 5f), 0f));
+        }
 
         private void OnEnable()
         {
@@ -62,19 +110,20 @@ namespace AnEchoHasNoShape.FogLighting
                 return;
             }
 
+            ApplyDistanceFade();
+
             if (player == null)
             {
                 FindPlayer();
             }
 
-            if (player != null)
+            PositionVolume();
+            if (snowfall != null)
             {
-                Vector3 playerPosition = player.position;
-                generatedObject.transform.position = new Vector3(
-                    playerPosition.x,
-                    playerPosition.y + spawnHeight,
-                    playerPosition.z);
+                var shape = snowfall.shape;
+                shape.scale = CoverageSize;
             }
+            RecycleSnow();
         }
 
         public void SetAreaBlend(float blend)
@@ -91,12 +140,18 @@ namespace AnEchoHasNoShape.FogLighting
             }
 
             ParticleSystem.EmissionModule emission = snowfall.emission;
-            emission.rateOverTime = emissionRate * areaBlend;
+            // Region opacity handles the fade; keep a populated volume even
+            // at the outer edge instead of multiplying two fades together.
+            emission.rateOverTime = emissionRate;
 
             if (areaBlend > 0.001f)
             {
                 if (!snowfall.isPlaying)
                 {
+                    PositionVolume();
+                    // Pre-simulate at the actual entry position, not the rig's
+                    // scene origin. Only runs on entry, never every frame.
+                    snowfall.Simulate(particleLifetime * 1.18f, true, true, true);
                     snowfall.Play();
                 }
             }
@@ -139,7 +194,9 @@ namespace AnEchoHasNoShape.FogLighting
             main.startSize = new ParticleSystem.MinMaxCurve(
                 Mathf.Min(particleSize.x, particleSize.y),
                 Mathf.Max(particleSize.x, particleSize.y));
-            main.startColor = snowColor;
+            main.startColor = new ParticleSystem.MinMaxGradient(
+                new Color(snowColor.r * 0.85f, snowColor.g * 0.9f, snowColor.b, snowColor.a * 0.6f), snowColor);
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
             main.simulationSpace = ParticleSystemSimulationSpace.World;
             main.scalingMode = ParticleSystemScalingMode.Local;
             main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
@@ -154,17 +211,14 @@ namespace AnEchoHasNoShape.FogLighting
             ParticleSystem.ShapeModule shape = snowfall.shape;
             shape.enabled = true;
             shape.shapeType = ParticleSystemShapeType.Box;
-            shape.scale = new Vector3(
-                Mathf.Max(1f, spawnArea.x),
-                Mathf.Max(0.1f, spawnArea.y),
-                Mathf.Max(1f, spawnArea.z));
+            shape.scale = CoverageSize;
 
             ParticleSystem.VelocityOverLifetimeModule velocity = snowfall.velocityOverLifetime;
             velocity.enabled = true;
             velocity.space = ParticleSystemSimulationSpace.World;
-            velocity.x = horizontalWind.x;
-            velocity.y = -fallSpeed;
-            velocity.z = horizontalWind.y;
+            velocity.x = new ParticleSystem.MinMaxCurve(horizontalWind.x - 0.15f, horizontalWind.x + 0.15f);
+            velocity.y = new ParticleSystem.MinMaxCurve(-fallSpeed * 1.3f, -fallSpeed * 0.7f);
+            velocity.z = new ParticleSystem.MinMaxCurve(horizontalWind.y - 0.15f, horizontalWind.y + 0.15f);
 
             ParticleSystem.NoiseModule noise = snowfall.noise;
             noise.enabled = turbulence > 0.001f;
@@ -200,6 +254,8 @@ namespace AnEchoHasNoShape.FogLighting
             };
             generatedMaterial.SetColor("_Tint", Color.white);
             generatedMaterial.SetFloat("_AreaBlend", areaBlend);
+
+            ApplyDistanceFade();
 
             ParticleSystemRenderer particleRenderer = generatedObject.GetComponent<ParticleSystemRenderer>();
             particleRenderer.renderMode = ParticleSystemRenderMode.Billboard;
@@ -255,6 +311,9 @@ namespace AnEchoHasNoShape.FogLighting
 
         private void OnValidate()
         {
+            distanceFadeStart = Mathf.Max(0f, distanceFadeStart);
+            distanceFadeEnd = Mathf.Max(distanceFadeStart + 0.01f, distanceFadeEnd);
+            distanceFadePower = Mathf.Clamp(distanceFadePower, 0.1f, 5f);
             emissionRate = Mathf.Clamp(emissionRate, 0f, 250f);
             spawnArea.x = Mathf.Max(1f, spawnArea.x);
             spawnArea.y = Mathf.Max(0.1f, spawnArea.y);

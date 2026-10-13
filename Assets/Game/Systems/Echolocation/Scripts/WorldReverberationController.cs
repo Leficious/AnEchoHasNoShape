@@ -40,10 +40,22 @@ namespace AnEchoHasNoShape.Echolocation
         [SerializeField] private AudioClip globalEchoSound;
         [SerializeField, Range(0f, 1f)] private float globalEchoVolume = 1f;
 
+        [Header("After All Three Regions")]
+        [SerializeField, Min(0.1f)] private float shortPulseDuration = 3f;
+        [Tooltip("Seconds between short pulse starts, not the gap after a pulse ends.")]
+        [SerializeField] private Vector2 shortPulseInterval = new Vector2(6f, 7f);
+        [Tooltip("Optional short echo sound. The long global echo sound is not repeated.")]
+        [SerializeField] private AudioClip shortEchoSound;
+
         private float radius;
         private bool isActive;
+        private float activeSpeed;
+        private bool repeating;
+        private bool endingOwnsPulses;
+        private float nextShortPulseAt = float.PositiveInfinity;
 
         public bool IsActive => isActive;
+        public bool HasLingeringPulse => isActive || (audioSource != null && audioSource.isPlaying);
         public Color ReverberationColor => reverberationColor;
         public float PulseSpeed => speed;
         public float PulseDuration => (range + fadeOutDistance) / Mathf.Max(0.1f, speed);
@@ -79,12 +91,31 @@ namespace AnEchoHasNoShape.Echolocation
 
         private void Update()
         {
+            bool completed = !endingOwnsPulses && GameManager.Instance != null && GameManager.Instance.AllRegionsCompleted;
+            if (!completed)
+            {
+                repeating = false;
+                nextShortPulseAt = float.PositiveInfinity;
+            }
+            else if (!repeating && !isActive)
+            {
+                // The last full-length completion echo must finish before repetition starts.
+                repeating = true;
+                nextShortPulseAt = Time.time;
+            }
+
+            if (repeating && !isActive && Time.time >= nextShortPulseAt)
+            {
+                TriggerShortReverberation(shortPulseDuration);
+                nextShortPulseAt = Time.time + Random.Range(shortPulseInterval.x, shortPulseInterval.y);
+            }
+
             if (!isActive)
             {
                 return;
             }
 
-            radius += speed * Time.deltaTime;
+            radius += activeSpeed * Time.deltaTime;
             Publish();
 
             if (radius > range + fadeOutDistance)
@@ -97,9 +128,15 @@ namespace AnEchoHasNoShape.Echolocation
         [ContextMenu("Trigger World Reverberation")]
         public void TriggerReverberation()
         {
+            if (endingOwnsPulses) return;
+            repeating = false;
+            nextShortPulseAt = float.PositiveInfinity;
+            activeSpeed = speed;
             radius = 0f;
             isActive = true;
             Publish();
+
+            GameManager.Instance?.PlayEchoCameraRumble(PulseDuration);
 
             if (audioSource != null && globalEchoSound != null)
             {
@@ -115,11 +152,35 @@ namespace AnEchoHasNoShape.Echolocation
             if (audioSource != null) audioSource.Stop();
         }
 
+        public void BeginEndingSequence()
+        {
+            endingOwnsPulses = true;
+            repeating = false;
+            nextShortPulseAt = float.PositiveInfinity;
+            // Reserve future pulses for the ending; let the current wave and sound finish.
+        }
+
+        public void SetEndingAudioFade(float volume)
+        {
+            if (endingOwnsPulses && audioSource != null) audioSource.volume = Mathf.Clamp01(volume);
+        }
+
+        public void TriggerShortReverberation(float duration, float shakeStrength = 1f)
+        {
+            radius = 0f;
+            activeSpeed = (range + fadeOutDistance) / Mathf.Max(0.1f, duration);
+            isActive = true;
+            Publish();
+            GameManager.Instance?.PlayEchoCameraRumble(duration, shakeStrength);
+            if (audioSource != null && shortEchoSound != null)
+                audioSource.PlayOneShot(shortEchoSound, globalEchoVolume);
+        }
+
         private void Publish()
         {
             Shader.SetGlobalVector(OriginId, transform.position);
             Shader.SetGlobalFloat(RadiusId, radius);
-            Shader.SetGlobalFloat("_WorldReverbSpeed", speed);
+            Shader.SetGlobalFloat("_WorldReverbSpeed", activeSpeed);
             Shader.SetGlobalFloat(WidthId, bandWidth);
             Shader.SetGlobalFloat(TrailLengthId, trailLength);
             Shader.SetGlobalFloat(IntensityId, brightness);
@@ -138,6 +199,8 @@ namespace AnEchoHasNoShape.Echolocation
         private void OnDisable()
         {
             isActive = false;
+            repeating = false;
+            nextShortPulseAt = float.PositiveInfinity;
             PublishInactive();
         }
 
@@ -159,6 +222,9 @@ namespace AnEchoHasNoShape.Echolocation
             fadeOutDistance = Mathf.Max(0.1f, fadeOutDistance);
             brightness = Mathf.Max(0f, brightness);
             fogRevealStrength = Mathf.Clamp01(fogRevealStrength);
+            shortPulseDuration = Mathf.Max(0.1f, shortPulseDuration);
+            shortPulseInterval.x = Mathf.Max(shortPulseDuration, shortPulseInterval.x);
+            shortPulseInterval.y = Mathf.Max(shortPulseInterval.x, shortPulseInterval.y);
         }
     }
 }

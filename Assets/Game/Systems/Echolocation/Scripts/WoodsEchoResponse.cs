@@ -31,7 +31,14 @@ namespace AnEchoHasNoShape.Echolocation
         private float disableFalseWallsAt = -1f;
         private float completionStarted = -1f, completionSpeed, nextRemoval;
         private Vector3 completionOrigin;
-        private readonly List<(Terrain terrain, TerrainData data, HashSet<int> indexes)> pendingTerrains = new();
+        private sealed class PendingTerrain
+        {
+            public Terrain terrain;
+            public TerrainData data;
+            public HashSet<int> indexes;
+            public List<TreeInstance> trees;
+        }
+        private readonly List<PendingTerrain> pendingTerrains = new();
         private readonly List<(Renderer renderer, bool enabled)> hiddenRenderers = new();
         private readonly List<(Terrain terrain, TerrainData original, TerrainData copy, TerrainCollider collider)> copies = new();
 
@@ -39,6 +46,7 @@ namespace AnEchoHasNoShape.Echolocation
         private static void ResetState()
         {
             Instance = null;
+            Shader.SetGlobalFloat("_GrassWoodsEchoValid", 0f);
             Shader.SetGlobalFloat("_WoodsReplyActive", 0f);
             Shader.SetGlobalInt("_WoodsOverwriteCount", 0);
             Shader.SetGlobalFloat("_WoodsCompletionActive", 0f);
@@ -118,6 +126,7 @@ namespace AnEchoHasNoShape.Echolocation
                 replyEndTime = started + (range + Shader.GetGlobalFloat("_EchoPulseSpacing") * 2.35f)
                     / Mathf.Max(1f, speed) + holdSeconds + fadeSeconds;
                 Shader.SetGlobalFloat("_WoodsReplyActive", 1f);
+                Shader.SetGlobalFloat("_GrassWoodsEchoValid", 1f);
                 audioDuck = 1f;
                 audioSource.volume = volume;
                 AudioClip clip = replyClip != null ? replyClip : GameAudioLibrary.Load()?.EchoClip;
@@ -137,6 +146,7 @@ namespace AnEchoHasNoShape.Echolocation
             if (hidden) return;
             hidden = true;
             due = started = -1f;
+            Shader.SetGlobalFloat("_GrassWoodsEchoValid", 0f);
             Shader.SetGlobalFloat("_WoodsReplyActive", 0f);
             audioDuck = 0f;
             var world = WorldReverberationController.Instance;
@@ -174,6 +184,8 @@ namespace AnEchoHasNoShape.Echolocation
                 for (int i = 0; i < prototypes.Length; i++)
                     if (prototypes[i].prefab != null && WoodsIllusionTree.IsIllusion(prototypes[i].prefab.transform)) indexes.Add(i);
                 if (indexes.Count == 0) continue;
+                TreeInstance[] originalTrees = original.treeInstances;
+                if (!System.Array.Exists(originalTrees, tree => indexes.Contains(tree.prototypeIndex))) continue;
                 TerrainData copy = Instantiate(original);
                 copy.name = original.name + " Woods Runtime";
                 copy.hideFlags = HideFlags.DontSave;
@@ -183,7 +195,8 @@ namespace AnEchoHasNoShape.Echolocation
                 terrain.terrainData = copy;
                 if (collider != null) collider.terrainData = copy;
                 terrain.Flush();
-                pendingTerrains.Add((terrain, copy, indexes));
+                pendingTerrains.Add(new PendingTerrain { terrain = terrain, data = copy,
+                    indexes = indexes, trees = new List<TreeInstance>(originalTrees) });
             }
             UpdateCompletion(!animate);
         }
@@ -197,22 +210,28 @@ namespace AnEchoHasNoShape.Echolocation
             {
                 var entry = pendingTerrains[terrainIndex];
                 if (entry.terrain == null || entry.data == null) { pendingTerrains.RemoveAt(terrainIndex); continue; }
-                TreeInstance[] trees = entry.data.treeInstances;
-                var remaining = new List<TreeInstance>(trees.Length);
-                bool changed = false;
+                // Compact the cached list in place; do not copy TerrainData's full
+                // native tree array and allocate a new list on every wave tick.
+                List<TreeInstance> trees = entry.trees;
+                int remainingCount = 0;
                 bool hasIllusions = false;
-                foreach (TreeInstance tree in trees)
+                Vector3 terrainPosition = entry.terrain.transform.position;
+                Vector3 terrainSize = entry.data.size;
+                float radiusSquared = radius * radius;
+                for (int treeIndex = 0; treeIndex < trees.Count; treeIndex++)
                 {
-                    Vector3 position = entry.terrain.transform.position + Vector3.Scale(tree.position, entry.data.size);
-                    if (entry.indexes.Contains(tree.prototypeIndex) && Vector3.Distance(position, completionOrigin) <= radius)
-                        changed = true;
-                    else
-                    {
-                        remaining.Add(tree);
-                        if (entry.indexes.Contains(tree.prototypeIndex)) hasIllusions = true;
-                    }
+                    TreeInstance tree = trees[treeIndex];
+                    bool illusion = entry.indexes.Contains(tree.prototypeIndex);
+                    if (illusion && (terrainPosition + Vector3.Scale(tree.position, terrainSize)
+                        - completionOrigin).sqrMagnitude <= radiusSquared) continue;
+                    trees[remainingCount++] = tree;
+                    if (illusion) hasIllusions = true;
                 }
-                if (changed) entry.data.SetTreeInstances(remaining.ToArray(), false);
+                if (remainingCount < trees.Count)
+                {
+                    trees.RemoveRange(remainingCount, trees.Count - remainingCount);
+                    entry.data.SetTreeInstances(trees.ToArray(), false);
+                }
                 if (!hasIllusions) pendingTerrains.RemoveAt(terrainIndex);
             }
             bool pendingRenderers = false;
@@ -232,6 +251,7 @@ namespace AnEchoHasNoShape.Echolocation
         private void OnDisable()
         {
             due = started = -1f;
+            Shader.SetGlobalFloat("_GrassWoodsEchoValid", 0f);
             Shader.SetGlobalFloat("_WoodsReplyActive", 0f);
             if (audioSource != null) audioSource.Stop();
         }
@@ -243,8 +263,9 @@ namespace AnEchoHasNoShape.Echolocation
                 if (entry.renderer != null) entry.renderer.enabled = entry.enabled;
             foreach (var entry in copies)
             {
-                if (entry.terrain != null && entry.terrain.terrainData == entry.copy) entry.terrain.terrainData = entry.original;
-                if (entry.collider != null && entry.collider.terrainData == entry.copy) entry.collider.terrainData = entry.original;
+                TerrainData restored = TerrainMuseVegetationProxy.ResolveRestoredData(entry.original);
+                if (entry.terrain != null && entry.terrain.terrainData == entry.copy) entry.terrain.terrainData = restored;
+                if (entry.collider != null && entry.collider.terrainData == entry.copy) entry.collider.terrainData = restored;
                 Destroy(entry.copy);
             }
             if (Instance == this) Instance = null;

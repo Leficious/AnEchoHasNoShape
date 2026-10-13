@@ -3,6 +3,7 @@ Shader "An Echo Has No Shape/Glacier Snow Particle"
     Properties
     {
         _Tint("Tint", Color) = (1, 1, 1, 1)
+        _DistanceFade("Distance Fade Start / End / Power", Vector) = (2, 24, 2, 0)
         [HideInInspector] _AreaBlend("Glacier Area Blend", Range(0, 1)) = 1
     }
 
@@ -11,20 +12,19 @@ Shader "An Echo Has No Shape/Glacier Snow Particle"
         Tags
         {
             "RenderPipeline" = "UniversalPipeline"
-            "RenderType" = "TransparentCutout"
-            "Queue" = "AlphaTest+25"
+            "RenderType" = "Transparent"
+            "Queue" = "Transparent+25"
         }
 
         Pass
         {
             Name "SnowParticle"
-            Tags { "LightMode" = "UniversalForward" }
+            Tags { "LightMode" = "EchoRevealPostFog" }
 
             Blend SrcAlpha OneMinusSrcAlpha
-            // AERO samples the camera depth texture after opaque/cutout geometry.
-            // Writing the clipped flake depth keeps snow visible against the sky
-            // while still allowing the volumetric pass to fog it by distance.
-            ZWrite On
+            // Composite after AERO without contributing flake depth to its fog.
+            // Scene depth still occludes flakes behind solid geometry.
+            ZWrite Off
             ZTest LEqual
             Cull Off
 
@@ -36,6 +36,7 @@ Shader "An Echo Has No Shape/Glacier Snow Particle"
 
             CBUFFER_START(UnityPerMaterial)
                 half4 _Tint;
+                float4 _DistanceFade;
                 float _AreaBlend;
             CBUFFER_END
 
@@ -51,12 +52,14 @@ Shader "An Echo Has No Shape/Glacier Snow Particle"
                 float4 positionHCS : SV_POSITION;
                 half4 color : COLOR;
                 float2 uv : TEXCOORD0;
+                float3 positionWS : TEXCOORD1;
             };
 
             Varyings Vert(Attributes input)
             {
                 Varyings output;
                 output.positionHCS = TransformObjectToHClip(input.positionOS.xyz);
+                output.positionWS = TransformObjectToWorld(input.positionOS.xyz);
                 output.color = input.color * _Tint;
                 output.uv = input.uv;
                 return output;
@@ -70,8 +73,14 @@ Shader "An Echo Has No Shape/Glacier Snow Particle"
                 float verticalGlint = 1.0 - smoothstep(0.08, 0.42, abs(centered.x));
                 float horizontalGlint = 1.0 - smoothstep(0.08, 0.42, abs(centered.y));
                 float crystal = saturate(softDisc + max(verticalGlint, horizontalGlint) * 0.22);
-                half alpha = input.color.a * crystal * _AreaBlend;
-                clip(alpha - 0.035h);
+                float distanceFade = 1.0 - smoothstep(_DistanceFade.x,
+                    max(_DistanceFade.x + 0.01, _DistanceFade.y),
+                    distance(input.positionWS, _WorldSpaceCameraPos));
+                // Stronger atmospheric attenuation without reintroducing the
+                // full-screen fog's sky masking of these transparent flakes.
+                distanceFade = pow(saturate(distanceFade), max(0.1, _DistanceFade.z));
+                half alpha = input.color.a * crystal * _AreaBlend * distanceFade;
+                clip(alpha - 0.001h);
                 return half4(input.color.rgb, alpha);
             }
             ENDHLSL

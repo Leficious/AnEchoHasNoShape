@@ -44,6 +44,7 @@ namespace AnEchoHasNoShape.Echolocation
                 skinnedEchoMaterial.SetFloat("_CityPerspective", identity);
                 for (int i = 0; i < skinnedSources.Length; i++)
                 {
+                    if (skinnedSources[i].GetComponentInParent<CityMuseVegetation>(true) != null) continue;
                     originalSkinnedMaterials[i] = skinnedSources[i].sharedMaterials;
                     Material[] materials = new Material[Mathf.Max(1, originalSkinnedMaterials[i].Length)];
                     for (int slot = 0; slot < materials.Length; slot++) materials[slot] = skinnedEchoMaterial;

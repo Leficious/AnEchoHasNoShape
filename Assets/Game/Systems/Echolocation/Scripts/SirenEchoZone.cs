@@ -59,6 +59,9 @@ namespace AnEchoHasNoShape.Echolocation
         private bool useSourceA = true;
         private float nextEchoTime;
         private bool pulseActive;
+        private bool wasEligible;
+        private Collider zoneCollider;
+        private readonly System.Collections.Generic.HashSet<Collider> playerColliders = new();
         private Vector3 pulseOrigin;
         private float pulseRadius;
         private float pulseRange;
@@ -75,7 +78,7 @@ namespace AnEchoHasNoShape.Echolocation
 
         private void Awake()
         {
-            Collider zoneCollider = GetComponent<Collider>();
+            zoneCollider = GetComponent<Collider>();
             zoneCollider.isTrigger = true;
 
             if (icebergRoot == null && transform.parent != null)
@@ -86,11 +89,19 @@ namespace AnEchoHasNoShape.Echolocation
 
         private void Update()
         {
-            if (IcebergStateGroup.GlacierCompleted) return;
-            if (playerColliderCount <= 0)
+            // Teleports and disabled/destroyed colliders need not deliver a normal exit.
+            playerColliders.RemoveWhere(IsStalePlayerCollider);
+            playerColliderCount = playerColliders.Count;
+            bool eligible = !IcebergStateGroup.GlacierCompleted && playerColliderCount > 0 &&
+                AnEchoHasNoShape.FogLighting.GlacierFogBlendZone.CurrentAreaBlend > 0f;
+            if (!eligible)
             {
+                if (wasEligible || activeSongs.Count > 0 || pulseActive) SilenceAfterCompletion();
+                wasEligible = false;
                 return;
             }
+            if (!wasEligible) nextEchoTime = Time.time + firstEchoDelay;
+            wasEligible = true;
 
             if (Time.time >= nextEchoTime)
             {
@@ -204,13 +215,23 @@ namespace AnEchoHasNoShape.Echolocation
 
         private readonly System.Collections.Generic.List<AudioSource> activeSongs = new();
 
+        private bool IsStalePlayerCollider(Collider candidate)
+        {
+            return candidate == null || !candidate.enabled || !candidate.gameObject.activeInHierarchy ||
+                zoneCollider == null || !zoneCollider.enabled || !zoneCollider.bounds.Intersects(candidate.bounds);
+        }
+
         public void SilenceAfterCompletion()
         {
             foreach (AudioSource song in activeSongs)
-                if (song != null) song.Stop();
+                if (song != null)
+                {
+                    song.Stop();
+                    Destroy(song.gameObject);
+                }
             activeSongs.Clear();
+            if (pulseActive) EchoPulseController.EndSirenPulse();
             pulseActive = false;
-            EchoPulseController.EndSirenPulse();
         }
 
         private void RandomizeSirenIcebergSelection()
@@ -259,7 +280,8 @@ namespace AnEchoHasNoShape.Echolocation
                 return;
             }
 
-            playerColliderCount++;
+            playerColliders.Add(other);
+            playerColliderCount = playerColliders.Count;
             if (playerColliderCount == 1)
             {
                 useSourceA = true;
@@ -274,11 +296,12 @@ namespace AnEchoHasNoShape.Echolocation
                 return;
             }
 
-            playerColliderCount = Mathf.Max(0, playerColliderCount - 1);
+            playerColliders.Remove(other);
+            playerColliderCount = playerColliders.Count;
             if (playerColliderCount == 0)
             {
-                EchoPulseController.EndSirenPulse();
-                pulseActive = false;
+                SilenceAfterCompletion();
+                wasEligible = false;
             }
         }
 
@@ -292,8 +315,9 @@ namespace AnEchoHasNoShape.Echolocation
 
         private void OnDisable()
         {
-            EchoPulseController.EndSirenPulse();
-            pulseActive = false;
+            SilenceAfterCompletion();
+            wasEligible = false;
+            playerColliders.Clear();
             playerColliderCount = 0;
         }
 

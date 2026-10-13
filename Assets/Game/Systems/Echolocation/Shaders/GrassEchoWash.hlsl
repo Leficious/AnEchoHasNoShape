@@ -14,6 +14,12 @@ float _WorldReverbRadius, _WorldReverbWidth, _WorldReverbRange, _WorldReverbFade
 float _WorldReverbActive, _WorldReverbIntensity, _WorldReverbSpeed;
 half4 _WorldReverbColor;
 float _GrassPlayerEchoValid, _GrassPlayerEchoPublishedAt;
+float _GrassWoodsEchoValid;
+float3 _WoodsReplyOrigin;
+float4 _WoodsReplySettings, _WoodsReplyStyle;
+half4 _WoodsReplyColor;
+int _WoodsOverwriteCount;
+float4 _WoodsOverwriteOrigins[32], _WoodsOverwriteSettings[32];
 
 // One broad response per echo, independent of blade edges, normals and secondary rings.
 float GrassWashEnvelope(float3 positionWS, float3 origin, float radius, float width,
@@ -44,6 +50,28 @@ half3 ApplyGrassEchoWash(half3 baseColor, float3 positionWS, float strength,
     if (strength <= 0.0) return baseColor;
     half3 tintSum = 0;
     float weightSum = 0, strongest = 0;
+    if (_GrassWoodsEchoValid > 0.0)
+    {
+        // Same broad wash and four-second hold as player grass echoes. Use
+        // elapsed time so the grass tail survives the moving reply ending.
+        float radius = max(0.0, _Time.y - _WoodsReplySettings.x) * _WoodsReplySettings.y;
+        float woods = GrassWashEnvelope(positionWS, _WoodsReplyOrigin, radius,
+            _WoodsReplyStyle.x, _WoodsReplySettings.y, _WoodsReplySettings.z, 5.0, fadeSeconds)
+            * saturate(_WoodsReplyStyle.z);
+        float erased = 0.0;
+        if (woods > 0.001)
+        {
+            [loop] for (int i = 0; i < _WoodsOverwriteCount; i++)
+            {
+                float d = distance(positionWS, _WoodsOverwriteOrigins[i].xyz);
+                float playerRadius = (_Time.y - _WoodsOverwriteOrigins[i].w) * _WoodsOverwriteSettings[i].x;
+                float arrival = smoothstep(0.0, max(0.01, _WoodsOverwriteSettings[i].z * 2.0), playerRadius - d);
+                erased = max(erased, arrival * (1.0 - smoothstep(
+                    _WoodsOverwriteSettings[i].y - 3.0, _WoodsOverwriteSettings[i].y, d)));
+            }
+        }
+        AccumulateGrassWash(_WoodsReplyColor.rgb, woods * (1.0 - erased), tintSum, weightSum, strongest);
+    }
     if (_GrassPlayerEchoValid > 0.0)
     {
         // The ring controller stops before the last grass blades finish fading.

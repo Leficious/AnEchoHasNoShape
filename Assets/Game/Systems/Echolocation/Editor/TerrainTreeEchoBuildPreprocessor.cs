@@ -90,9 +90,13 @@ namespace AnEchoHasNoShape.Echolocation.Editor
                     continue;
                 }
 
-                foreach (TreePrototype prototype in terrainData.treePrototypes)
+                var prefabs = new List<GameObject>();
+                foreach (var tree in terrainData.treePrototypes) if (tree.prefab != null) prefabs.Add(tree.prefab);
+                foreach (var detail in terrainData.detailPrototypes)
+                    if (detail.prototype != null && detail.prototype.GetComponent<CityMuseVegetation>() != null)
+                        prefabs.Add(detail.prototype);
+                foreach (GameObject prefab in prefabs)
                 {
-                    GameObject prefab = prototype.prefab;
                     if (prefab == null)
                     {
                         continue;

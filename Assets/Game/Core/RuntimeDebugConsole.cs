@@ -40,7 +40,11 @@ namespace AnEchoHasNoShape
             "/city ruler",
             "/city architect",
             "/city reset",
-            "/city gold"
+            "/city gold",
+            "/clear glacier",
+            "/clear city",
+            "/clear woods",
+            "/clear all"
         };
 
         private static readonly string[] SuggestionDescriptions =
@@ -57,6 +61,7 @@ namespace AnEchoHasNoShape
             "Teleport to the glacier midpoint",
             "Teleport to the glacier endpoint",
             "Teleport to the Unremembered City main entrance",
+            "Teleport to the Illusory Woods endpoint",
             "Unlock the echo ability",
             "Apply completed tutorial progression",
             "Trigger a world reverberation",
@@ -65,7 +70,11 @@ namespace AnEchoHasNoShape
             "Trigger the Ruler's red city state",
             "Trigger the Architect's green city state",
             "Reset city progression and remove permanent gold",
-            "Trigger the final world echo and permanent golden city"
+            "Trigger the final world echo and permanent golden city",
+            "Complete Glacial Ocean, light icebergs gold and silence sirens",
+            "Complete Unremembered City and trigger permanent gold",
+            "Complete Illusory Woods, remove illusions and reveal guides",
+            "Complete all three regions and unlock the monument ending"
         };
 
         private Canvas canvas;
@@ -117,6 +126,7 @@ namespace AnEchoHasNoShape
 
         private void Update()
         {
+            if (AnEchoHasNoShape.Interaction.GoldenGateInteractable.IsEnding) return;
             if (!consoleOpen && Time.frameCount > consoleClosedFrame && ConsoleTogglePressed())
             {
                 OpenConsole();
@@ -304,6 +314,56 @@ namespace AnEchoHasNoShape
             FocusInput();
         }
 
+        private string CompleteRegion(string name)
+        {
+            GameManager manager = GameManager.Instance;
+            if (manager == null) return "GameManager is not ready.";
+            GameManager.CompletedRegion region;
+            switch (name)
+            {
+                case "glacier": region = GameManager.CompletedRegion.Glacier; break;
+                case "city": region = GameManager.CompletedRegion.City; break;
+                case "woods": region = GameManager.CompletedRegion.Woods; break;
+                default: return "Usage: /clear <glacier|city|woods>";
+            }
+            if (manager.IsRegionCompleted(region)) return name + " is already completed.";
+            if (region == GameManager.CompletedRegion.City)
+            {
+                var city = FindAnyObjectByType<CitySequenceController>();
+                if (city == null || !city.DebugSetEchoState("gold")) return "City sequence is not ready.";
+                manager.RegisterRegionCompletion(region);
+            }
+            else
+            {
+                string target = region == GameManager.CompletedRegion.Glacier ? "IceTabletEnd" : "WoodsTabletEnd";
+                ReadableTextInteractable tablet = null;
+                foreach (var candidate in FindObjectsByType<ReadableTextInteractable>(FindObjectsInactive.Include))
+                    if (candidate.name.Replace(" ", string.Empty).Equals(target, System.StringComparison.OrdinalIgnoreCase))
+                    { tablet = candidate; break; }
+                if (tablet == null) return "Could not find " + target + ".";
+                tablet.ApplyCompletedState(true, true);
+                if (!manager.IsRegionCompleted(region)) return "Completion was not applied; the tablet may already have been consumed without recording progress.";
+            }
+            return name + " completed. Central beacon: " + (manager.AllRegionsCompleted ? "unlocked." : "waiting for the other regions.");
+        }
+
+        private string CompleteAllRegions()
+        {
+            GameManager manager = GameManager.Instance;
+            if (manager == null) return "GameManager is not ready.";
+            if (manager.AllRegionsCompleted) return "All regions are already completed.";
+
+            // End on the city so its normal golden world echo is the final full pulse.
+            foreach (string name in new[] { "glacier", "woods", "city" })
+            {
+                string result = CompleteRegion(name);
+                if (!manager.IsRegionCompleted(name == "glacier" ? GameManager.CompletedRegion.Glacier
+                    : name == "woods" ? GameManager.CompletedRegion.Woods : GameManager.CompletedRegion.City))
+                    return "Could not clear all regions: " + result;
+            }
+            return "All regions completed. Monument ending unlocked.";
+        }
+
         private void Execute(string rawCommand)
         {
             string command = (rawCommand ?? string.Empty).Trim().TrimStart('/');
@@ -319,7 +379,15 @@ namespace AnEchoHasNoShape
             switch (parts[0].ToLowerInvariant())
             {
                 case "help":
-                    result = "/tp centermonument | /tp glaciermonument | /tp glaciercity | /tp glaciermid | /tp glacierend | /tp citymainentrance | /tp woodsend | /god | /player | /fog [on|off] | /echo unlock | /tutorial complete | /reverb | /city <neutral|muse|ruler|architect|reset|gold>";
+                    result = "/tp centermonument | /tp glaciermonument | /tp glaciercity | /tp glaciermid | /tp glacierend | /tp citymainentrance | /tp woodsend | /god | /player | /fog [on|off] | /echo unlock | /tutorial complete | /reverb | /city <neutral|muse|ruler|architect|reset|gold> | /clear <glacier|city|woods|all>";
+                    break;
+                case "clear":
+                    result = parts.Length == 2
+                        ? parts[1].Equals("all", System.StringComparison.OrdinalIgnoreCase)
+                            ? CompleteAllRegions() : CompleteRegion(parts[1].ToLowerInvariant())
+                        : "Usage: /clear <glacier|city|woods|all>";
+                    closeAfterExecution = result.StartsWith("All regions completed.") ||
+                        (parts.Length == 2 && result.StartsWith(parts[1].ToLowerInvariant() + " completed."));
                     break;
                 case "city":
                     if (parts.Length != 2)

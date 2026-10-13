@@ -14,10 +14,46 @@ namespace AnEchoHasNoShape.Echolocation
     public sealed class TerrainTreeEchoProxy : MonoBehaviour
     {
         private const string ProxyRootName = "Terrain Tree Echo Proxies (Runtime)";
+        [SerializeField, Min(16f)] private float chunkSize = 64f;
 
         private Terrain sourceTerrain;
         private GameObject proxyRoot;
         private readonly List<Mesh> generatedMeshes = new List<Mesh>();
+        private readonly List<EchoReactiveSurface> surfaces = new List<EchoReactiveSurface>();
+        private readonly List<Renderer> overlays = new List<Renderer>();
+        private Camera viewCamera;
+        private float appliedTreeDistance = -1f;
+
+        private void LateUpdate()
+        {
+            if (sourceTerrain == null) return;
+            if (viewCamera == null || !viewCamera.isActiveAndEnabled) viewCamera = Camera.main;
+            float distance = Mathf.Max(0.01f, sourceTerrain.treeDistance);
+            if (!Mathf.Approximately(distance, appliedTreeDistance))
+            {
+                appliedTreeDistance = distance;
+                foreach (var surface in surfaces)
+                    if (surface != null) surface.SetTerrainTreeDrawDistance(distance);
+            }
+            bool draw = sourceTerrain.enabled && sourceTerrain.drawTreesAndFoliage && sourceTerrain.treeDistance > 0f;
+            bool hasCamera = viewCamera != null;
+            Vector3 cameraPosition = hasCamera ? viewCamera.transform.position : Vector3.zero;
+            float distanceSquared = distance * distance;
+            foreach (Renderer overlay in overlays)
+            {
+                if (overlay == null) continue;
+                // Culling must never re-enable illusion trees hidden by completion.
+                bool culled = !draw || (hasCamera &&
+                    overlay.bounds.SqrDistance(cameraPosition) > distanceSquared);
+                if (overlay.forceRenderingOff != culled) overlay.forceRenderingOff = culled;
+            }
+        }
+
+        private void OnDisable()
+        {
+            foreach (Renderer overlay in overlays)
+                if (overlay != null) overlay.forceRenderingOff = true;
+        }
 
         public static void EnsureFor(Terrain terrain)
         {
@@ -124,7 +160,7 @@ namespace AnEchoHasNoShape.Echolocation
             string prototypeName,
             bool woodsIllusion)
         {
-            var combines = new List<CombineInstance>();
+            var chunks = new Dictionary<Vector2Int, List<CombineInstance>>();
 
             foreach (TreeInstance instance in instances)
             {
@@ -137,6 +173,13 @@ namespace AnEchoHasNoShape.Echolocation
                 Quaternion localRotation = Quaternion.Euler(0f, instance.rotation * Mathf.Rad2Deg, 0f);
                 Vector3 localScale = new Vector3(instance.widthScale, instance.heightScale, instance.widthScale);
 
+                var cell = new Vector2Int(Mathf.FloorToInt(localPosition.x / Mathf.Max(16f, chunkSize)),
+                    Mathf.FloorToInt(localPosition.z / Mathf.Max(16f, chunkSize)));
+                if (!chunks.TryGetValue(cell, out List<CombineInstance> combines))
+                {
+                    combines = new List<CombineInstance>();
+                    chunks.Add(cell, combines);
+                }
                 combines.Add(new CombineInstance
                 {
                     mesh = sourceMesh,
@@ -145,10 +188,13 @@ namespace AnEchoHasNoShape.Echolocation
                 });
             }
 
-            if (combines.Count == 0)
-            {
-                return;
-            }
+            foreach (var chunk in chunks)
+                BuildChunk(chunk.Value, sourceMaterial, prototypeName, subMeshIndex, woodsIllusion, chunk.Key);
+        }
+
+        private void BuildChunk(List<CombineInstance> combines, Material sourceMaterial,
+            string prototypeName, int subMeshIndex, bool woodsIllusion, Vector2Int cell)
+        {
 
             Mesh combinedMesh = new Mesh
             {
@@ -160,7 +206,7 @@ namespace AnEchoHasNoShape.Echolocation
             combinedMesh.RecalculateBounds();
             generatedMeshes.Add(combinedMesh);
 
-            GameObject proxy = new GameObject($"{prototypeName} Echo {subMeshIndex}")
+            GameObject proxy = new GameObject($"{prototypeName} Echo {subMeshIndex} [{cell.x},{cell.y}]")
             {
                 hideFlags = HideFlags.DontSave,
                 layer = gameObject.layer
@@ -178,11 +224,16 @@ namespace AnEchoHasNoShape.Echolocation
             renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
 
             if (woodsIllusion) proxy.AddComponent<WoodsIllusionTree>();
-            proxy.AddComponent<EchoReactiveSurface>();
+            var surface = proxy.AddComponent<EchoReactiveSurface>();
+            surfaces.Add(surface);
+            surface.SetTerrainTreeDrawDistance(Mathf.Max(0.01f, sourceTerrain.treeDistance));
+            foreach (Renderer overlay in proxy.GetComponentsInChildren<Renderer>())
+                if (overlay != renderer) overlays.Add(overlay);
 
             // EchoReactiveSurface has already copied the mesh/material data into
             // its two overlay children. The source proxy itself must stay hidden.
             renderer.enabled = false;
+            combinedMesh.UploadMeshData(true);
         }
 
         private static IEnumerable<MeshRenderer> GetEchoLodRenderers(GameObject prefab)

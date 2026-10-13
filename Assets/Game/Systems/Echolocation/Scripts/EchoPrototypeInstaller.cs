@@ -31,6 +31,7 @@ namespace AnEchoHasNoShape.Echolocation
                     (renderer.gameObject.hideFlags & HideFlags.DontSave) != 0 ||
                     renderer.transform.root.CompareTag("Player") ||
                     renderer.GetComponentInParent<EchoRenderingExclusion>(true) != null ||
+                    renderer.GetComponentInParent<CityMuseVegetation>(true) != null ||
                     UsesGrassWash(renderer))
                 {
                     continue;
@@ -70,6 +71,7 @@ namespace AnEchoHasNoShape.Echolocation
                 }
 
                 TerrainTreeEchoProxy.EnsureFor(terrain);
+                TerrainMuseVegetationProxy.EnsureFor(terrain);
             }
         }
 

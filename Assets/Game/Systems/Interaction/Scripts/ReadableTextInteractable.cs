@@ -99,7 +99,9 @@ namespace AnEchoHasNoShape.Interaction
 
             if ((triggerWorldReverberationAfterFirstRead || glacierEnd || woodsEnd) && recordProgress)
             {
-                GameManager.Instance?.RegisterWorldReverberationCompletion();
+                if (glacierEnd) GameManager.Instance?.RegisterRegionCompletion(GameManager.CompletedRegion.Glacier);
+                else if (woodsEnd) GameManager.Instance?.RegisterRegionCompletion(GameManager.CompletedRegion.Woods);
+                else GameManager.Instance?.RegisterWorldReverberationCompletion();
             }
 
             if (openHiddenDoorAfterFirstRead)

@@ -363,6 +363,16 @@ namespace AnEchoHasNoShape.Echolocation
             ApplyProfile(outlineMaterials, profile, true);
         }
 
+        public void SetTerrainTreeDrawDistance(float distance)
+        {
+            if (ringMaterials != null)
+                foreach (Material material in ringMaterials)
+                    if (material != null) material.SetFloat("_TerrainTreeEchoDistance", distance);
+            if (outlineMaterials != null)
+                foreach (Material material in outlineMaterials)
+                    if (material != null) material.SetFloat("_TerrainTreeEchoDistance", distance);
+        }
+
         private void ApplyProfile(Material[] materials, EchoSurfaceProfile profile, bool outlineMode)
         {
             if (materials == null) return;
